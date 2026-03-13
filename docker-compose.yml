@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: noa_postgres
+    environment:
+      POSTGRES_USER: noa
+      POSTGRES_PASSWORD: noa_pass
+      POSTGRES_DB: noa_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - noa_postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noa -d noa_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: noa_redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: noa_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  noa_postgres_data:
