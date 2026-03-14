@@ -39,8 +39,7 @@ def compute_hrv(payload: HRVMetricsRequest) -> dict:
     return engine.compute_hrv_metrics(payload.rr_ms)
 
 
-@router.post("/pmc/{athlete_id}", response_model=list[PMCDayResponse], status_code=status.HTTP_201_CREATED)
-def compute_pmc_for_athlete(athlete_id: UUID, db: Session = Depends(get_db)) -> list[dict]:
+def _compute_and_store_pmc(athlete_id: UUID, db: Session) -> list[dict]:
     athlete = db.query(Athlete).filter(Athlete.id == athlete_id).first()
     if not athlete:
         raise HTTPException(status_code=404, detail="Athlete not found")
@@ -111,5 +110,19 @@ def compute_pmc_for_athlete(athlete_id: UUID, db: Session = Depends(get_db)) -> 
         )
 
     db.commit()
-
     return response_rows
+
+
+@router.post("/pmc/{athlete_id}", response_model=list[PMCDayResponse], status_code=status.HTTP_201_CREATED)
+def compute_pmc_for_athlete(athlete_id: UUID, db: Session = Depends(get_db)) -> list[dict]:
+    return _compute_and_store_pmc(athlete_id=athlete_id, db=db)
+
+
+@router.post("/pmc/auto", response_model=list[PMCDayResponse], status_code=status.HTTP_201_CREATED)
+def compute_pmc_auto(db: Session = Depends(get_db)) -> list[dict]:
+    athlete = db.query(Athlete).order_by(Athlete.created_at.asc()).first()
+
+    if not athlete:
+        raise HTTPException(status_code=404, detail="No athletes found")
+
+    return _compute_and_store_pmc(athlete_id=athlete.id, db=db)
