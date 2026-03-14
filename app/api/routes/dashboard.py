@@ -66,3 +66,50 @@ def athlete_dashboard(athlete_id: UUID, db: Session = Depends(get_db)):
             "score": risk.risk_score if risk else None,
         },
     }
+
+
+@router.get("/team")
+def team_dashboard(db: Session = Depends(get_db)):
+
+    athletes = db.query(Athlete).all()
+
+    result = []
+
+    for athlete in athletes:
+
+        biomarker = (
+            db.query(DailyBiomarker)
+            .filter(DailyBiomarker.athlete_id == athlete.id)
+            .order_by(DailyBiomarker.day.desc())
+            .first()
+        )
+
+        pmc = (
+            db.query(PMCMetric)
+            .filter(PMCMetric.athlete_id == athlete.id)
+            .order_by(PMCMetric.day.desc())
+            .first()
+        )
+
+        risk = (
+            db.query(RiskAssessment)
+            .filter(RiskAssessment.athlete_id == athlete.id)
+            .order_by(RiskAssessment.day.desc())
+            .first()
+        )
+
+        result.append(
+            {
+                "id": athlete.id,
+                "name": f"{athlete.first_name} {athlete.last_name}",
+                "ftp": athlete.ftp_watts,
+                "vo2max": athlete.vo2max,
+                "hrv": biomarker.hrv_rmssd_ms if biomarker else None,
+                "ctl": pmc.ctl if pmc else None,
+                "atl": pmc.atl if pmc else None,
+                "tsb": pmc.tsb if pmc else None,
+                "risk": risk.risk_level if risk else None,
+            }
+        )
+
+    return result
