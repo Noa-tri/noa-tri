@@ -19,6 +19,7 @@ def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)
 
     session = TrainingSession(
         athlete_id=payload.athlete_id,
+        source=payload.source,
         sport=payload.sport,
         start_time=payload.start_time,
         duration_sec=payload.duration_sec,
