@@ -55,15 +55,18 @@ def athlete_dashboard(athlete_id: UUID, db: Session = Depends(get_db)):
         "hrv": {
             "rmssd": biomarker.hrv_rmssd_ms if biomarker else None,
             "lnrmssd": biomarker.hrv_lnrmssd if biomarker else None,
+            "day": biomarker.day if biomarker else None,
         },
         "training_load": {
             "ctl": pmc.ctl if pmc else None,
             "atl": pmc.atl if pmc else None,
             "tsb": pmc.tsb if pmc else None,
+            "day": pmc.day if pmc else None,
         },
         "risk": {
             "level": risk.risk_level if risk else None,
             "score": risk.risk_score if risk else None,
+            "day": risk.day if risk else None,
         },
     }
 
@@ -71,7 +74,7 @@ def athlete_dashboard(athlete_id: UUID, db: Session = Depends(get_db)):
 @router.get("/team")
 def team_dashboard(db: Session = Depends(get_db)):
 
-    athletes = db.query(Athlete).all()
+    athletes = db.query(Athlete).order_by(Athlete.first_name.asc()).all()
 
     result = []
 
@@ -104,11 +107,14 @@ def team_dashboard(db: Session = Depends(get_db)):
                 "name": f"{athlete.first_name} {athlete.last_name}",
                 "ftp": athlete.ftp_watts,
                 "vo2max": athlete.vo2max,
-                "hrv": biomarker.hrv_rmssd_ms if biomarker else None,
+                "hrv_rmssd": biomarker.hrv_rmssd_ms if biomarker else None,
+                "hrv_day": biomarker.day if biomarker else None,
                 "ctl": pmc.ctl if pmc else None,
                 "atl": pmc.atl if pmc else None,
                 "tsb": pmc.tsb if pmc else None,
-                "risk": risk.risk_level if risk else None,
+                "pmc_day": pmc.day if pmc else None,
+                "risk_level": risk.risk_level if risk else None,
+                "risk_score": risk.risk_score if risk else None,
             }
         )
 
