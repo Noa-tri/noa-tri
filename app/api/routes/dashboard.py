@@ -9,7 +9,11 @@ from app.models.daily_biomarker import DailyBiomarker
 from app.models.pmc_metric import PMCMetric
 from app.models.risk_assessment import RiskAssessment
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+router = APIRouter(
+    prefix="/dashboard",
+    tags=["dashboard"],
+)
 
 
 @router.get("/athlete/{athlete_id}")
