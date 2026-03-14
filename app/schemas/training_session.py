@@ -1,11 +1,30 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
+from enum import Enum
 from typing import Optional
+from uuid import UUID
+
+from pydantic import BaseModel
+
+
+class SessionSport(str, Enum):
+    triathlon = "triathlon"
+    swim = "swim"
+    bike = "bike"
+    run = "run"
+    strength = "strength"
+    mobility = "mobility"
+    other = "other"
+
+
+class SessionSource(str, Enum):
+    garmin_api = "garmin_api"
+    fit_import = "fit_import"
+    manual = "manual"
 
 
 class TrainingSessionBase(BaseModel):
-    sport: str
+    source: SessionSource = SessionSource.manual
+    sport: SessionSport
     start_time: datetime
     duration_sec: int
     distance_m: Optional[float] = None
