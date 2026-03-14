@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,7 +19,7 @@ class HRVMetricsRequest(BaseModel):
 
 
 class PMCDayResponse(BaseModel):
-    day: str
+    day: date
     daily_tss: float
     ctl: float
     atl: float
@@ -50,27 +51,34 @@ def compute_pmc_for_athlete(athlete_id: UUID, db: Session = Depends(get_db)) -> 
         .order_by(TrainingSession.start_time.asc())
         .all()
     )
+
     if not sessions:
         raise HTTPException(status_code=404, detail="No sessions found for athlete")
 
-    grouped: dict[str, float] = {}
-    for session in sessions:
-        day = session.start_time.date().isoformat()
-        grouped.setdefault(day, 0.0)
-        grouped[day] += float(session.tss or 0.0)
+    grouped: dict[date, float] = {}
 
-    day_labels = list(grouped.keys())
-    daily_tss = list(grouped.values())
+    for session in sessions:
+        session_day = session.start_time.date()
+        grouped.setdefault(session_day, 0.0)
+        grouped[session_day] += float(session.tss or 0.0)
+
+    ordered_days = sorted(grouped.keys())
+    day_labels = [day.isoformat() for day in ordered_days]
+    daily_tss = [grouped[day] for day in ordered_days]
 
     engine = NoaPerformanceEngine()
     pmc_series = engine.compute_pmc_series(day_labels=day_labels, daily_tss=daily_tss)
 
+    response_rows: list[dict] = []
+
     for item in pmc_series:
+        item_day = date.fromisoformat(item.day)
+
         existing = (
             db.query(PMCMetric)
             .filter(
                 PMCMetric.athlete_id == athlete_id,
-                PMCMetric.day == item.day,
+                PMCMetric.day == item_day,
             )
             .first()
         )
@@ -79,7 +87,7 @@ def compute_pmc_for_athlete(athlete_id: UUID, db: Session = Depends(get_db)) -> 
             db.add(
                 PMCMetric(
                     athlete_id=athlete_id,
-                    day=item.day,
+                    day=item_day,
                     daily_tss=item.daily_tss,
                     ctl=item.ctl,
                     atl=item.atl,
@@ -92,15 +100,16 @@ def compute_pmc_for_athlete(athlete_id: UUID, db: Session = Depends(get_db)) -> 
             existing.atl = item.atl
             existing.tsb = item.tsb
 
+        response_rows.append(
+            {
+                "day": item_day,
+                "daily_tss": item.daily_tss,
+                "ctl": item.ctl,
+                "atl": item.atl,
+                "tsb": item.tsb,
+            }
+        )
+
     db.commit()
 
-    return [
-        {
-            "day": item.day,
-            "daily_tss": item.daily_tss,
-            "ctl": item.ctl,
-            "atl": item.atl,
-            "tsb": item.tsb,
-        }
-        for item in pmc_series
-    ]
+    return response_rows
