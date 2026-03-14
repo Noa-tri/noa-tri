@@ -26,8 +26,6 @@ app = FastAPI(
     debug=settings.APP_DEBUG,
 )
 
-
-# ROUTERS
 app.include_router(athletes_router, prefix=settings.API_V1_PREFIX)
 app.include_router(sessions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(biomarkers_router, prefix=settings.API_V1_PREFIX)
