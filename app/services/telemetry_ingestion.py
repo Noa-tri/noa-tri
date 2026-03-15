@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -14,6 +15,12 @@ from app.models.daily_biomarker import DailyBiomarker
 from app.models.training_session import SessionSource, SessionSport, TrainingSession
 from app.services.garmin_fit_parser import GarminFitParser, FitParseResult
 from app.services.performance_pipeline import PerformancePipeline
+
+
+@dataclass
+class IngestionResult:
+    session_id: str
+    status: str
 
 
 class TelemetryIngestionService:
@@ -75,6 +82,27 @@ class TelemetryIngestionService:
             "records_found": len(parsed.records),
             "file_id": parsed.raw_file_id,
         }
+
+    def ingest_fit_bytes(
+        self,
+        athlete_id: str | UUID,
+        fit_bytes: bytes,
+        source_provider: str | None = None,
+        source_activity_id: str | None = None,
+    ) -> IngestionResult:
+        with NamedTemporaryFile(delete=False, suffix=".fit") as temp_file:
+            temp_file.write(fit_bytes)
+            temp_path = temp_file.name
+
+        result = self.ingest_fit_file(
+            athlete_id=athlete_id,
+            fit_file_path=temp_path,
+        )
+
+        return IngestionResult(
+            session_id=result["session_id"],
+            status=result["status"],
+        )
 
     async def ingest_uploaded_fit_bytes(
         self,
