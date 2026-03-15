@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import log
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import statistics
 
@@ -39,7 +39,7 @@ class RiskAssessment:
 
 class NoaPerformanceEngine:
     """
-    Analytical core for NOA TRI.
+    Core analytical engine for NOA TRI.
 
     Responsibilities:
     - PMC computation (CTL, ATL, TSB) using EWMA.
@@ -59,8 +59,12 @@ class NoaPerformanceEngine:
         atl_days: int = DEFAULT_ATL_DAYS,
         hrv_baseline_window: int = DEFAULT_HRV_BASELINE_WINDOW,
     ) -> None:
-        if ctl_days <= 0 or atl_days <= 0 or hrv_baseline_window <= 1:
-            raise ValueError("Invalid configuration constants.")
+        if ctl_days <= 0:
+            raise ValueError("ctl_days must be > 0.")
+        if atl_days <= 0:
+            raise ValueError("atl_days must be > 0.")
+        if hrv_baseline_window <= 1:
+            raise ValueError("hrv_baseline_window must be > 1.")
 
         self.ctl_days = ctl_days
         self.atl_days = atl_days
@@ -73,9 +77,9 @@ class NoaPerformanceEngine:
     @staticmethod
     def _ewma(values: Sequence[float], time_constant_days: int) -> List[float]:
         """
-        Exponential weighted moving average using the classical PMC formulation:
+        Exponential weighted moving average using classical PMC formulation:
             EWMA_today = EWMA_yesterday + alpha * (load_today - EWMA_yesterday)
-        with alpha = 1 / time_constant_days
+        where alpha = 1 / time_constant_days
         """
         if not values:
             return []
@@ -137,13 +141,18 @@ class NoaPerformanceEngine:
         relative_jump_threshold: float = 0.20,
     ) -> Tuple[List[int], Dict[str, Any]]:
         """
-        Basic RR cleaning pipeline:
+        RR cleaning pipeline:
         1. Physiological plausibility filter.
         2. Relative jump filter to suppress artifacts / ectopic-like beats.
-        3. Median-based local correction by exclusion.
+        3. Exclusion-based cleaning.
 
-        This returns retained RR values only.
+        Returns retained RR values only.
         """
+        if min_rr_ms <= 0 or max_rr_ms <= min_rr_ms:
+            raise ValueError("Invalid RR bounds.")
+        if relative_jump_threshold <= 0:
+            raise ValueError("relative_jump_threshold must be > 0.")
+
         if not rr_ms:
             return [], {
                 "input_count": 0,
@@ -153,6 +162,7 @@ class NoaPerformanceEngine:
             }
 
         plausible = [int(x) for x in rr_ms if min_rr_ms <= int(x) <= max_rr_ms]
+
         if len(plausible) < 2:
             return [], {
                 "input_count": len(rr_ms),
@@ -190,7 +200,8 @@ class NoaPerformanceEngine:
         if len(rr_ms) < 2:
             return None
 
-        diffs_sq = []
+        diffs_sq: List[int] = []
+
         for i in range(1, len(rr_ms)):
             diff = rr_ms[i] - rr_ms[i - 1]
             diffs_sq.append(diff * diff)
@@ -242,7 +253,8 @@ class NoaPerformanceEngine:
         """
         Baseline derived from the most recent N valid daily RMSSD values.
         """
-        valid = [float(v) for v in historical_rmssd if v is not None and v > 0]
+        valid = [float(v) for v in historical_rmssd if v is not None and float(v) > 0]
+
         if len(valid) < self.hrv_baseline_window:
             raise ValueError(
                 f"At least {self.hrv_baseline_window} valid RMSSD samples are required."
@@ -306,10 +318,14 @@ class NoaPerformanceEngine:
         if baseline_std_rmssd <= 0:
             return 0
 
+        valid = [float(v) for v in recent_rmssd if v is not None and float(v) > 0]
+        if not valid:
+            return 0
+
         count = 0
         threshold_value = baseline_mean_rmssd + (threshold_sd * baseline_std_rmssd)
 
-        for value in reversed(recent_rmssd):
+        for value in reversed(valid):
             if value < threshold_value:
                 count += 1
             else:
@@ -325,6 +341,12 @@ class NoaPerformanceEngine:
     def _bounded_score(value: float, low: float = 0.0, high: float = 100.0) -> float:
         return max(low, min(high, value))
 
+    @staticmethod
+    def _compute_atl_ctl_ratio(atl: float, ctl: float) -> float:
+        if ctl <= 0:
+            return 999.0
+        return float(atl / ctl)
+
     def compute_risk_score(
         self,
         current_rmssd: float,
@@ -337,9 +359,9 @@ class NoaPerformanceEngine:
         body_battery: Optional[float] = None,
     ) -> RiskAssessment:
         """
-        Multivariable physiological risk scoring.
+        Multivariable physiological risk scoring for NOA.
 
-        Design intent:
+        Logic:
         - HRV deviation drives the primary signal.
         - ATL/CTL reflects acute overload pressure.
         - TSB reflects freshness / accumulated strain.
@@ -351,7 +373,8 @@ class NoaPerformanceEngine:
 
         anomaly = self.detect_hrv_anomaly(current_rmssd, baseline)
         z = float(anomaly["zscore"])
-        atl_ctl_ratio = float(atl / ctl) if ctl > 0 else float("inf")
+        atl_ctl_ratio = self._compute_atl_ctl_ratio(atl=atl, ctl=ctl)
+
         persistence_days = self.count_consecutive_below_baseline(
             recent_rmssd=recent_rmssd,
             baseline_mean_rmssd=baseline.mean_rmssd,
@@ -371,7 +394,7 @@ class NoaPerformanceEngine:
         else:
             score += 4.0
 
-        # Acute/chronic load ratio contribution
+        # Acute/chronic load contribution
         if atl_ctl_ratio >= 1.30:
             score += 25.0
         elif atl_ctl_ratio >= 1.15:
@@ -397,7 +420,7 @@ class NoaPerformanceEngine:
         elif persistence_days == 1:
             score += 4.0
 
-        # Recovery penalty / modulation
+        # Recovery modulation
         sleep_penalty = 0.0
 
         if sleep_score is not None:
@@ -425,7 +448,7 @@ class NoaPerformanceEngine:
         rationale = {
             "hrv_status": anomaly["status"],
             "hrv_zscore": round(z, 4),
-            "atl_ctl_ratio": round(atl_ctl_ratio, 4) if atl_ctl_ratio != float("inf") else None,
+            "atl_ctl_ratio": round(atl_ctl_ratio, 4) if atl_ctl_ratio != 999.0 else None,
             "tsb": round(tsb, 3),
             "persistence_days": persistence_days,
             "sleep_score": sleep_score,
@@ -438,7 +461,7 @@ class NoaPerformanceEngine:
             risk_level=risk_level,
             risk_score=round(score, 2),
             hrv_zscore=round(z, 4),
-            atl_ctl_ratio=round(atl_ctl_ratio, 4) if atl_ctl_ratio != float("inf") else 999.0,
+            atl_ctl_ratio=round(atl_ctl_ratio, 4),
             tsb=round(tsb, 3),
             hrv_persistence_days=persistence_days,
             sleep_penalty=round(sleep_penalty, 2),
@@ -460,8 +483,12 @@ class NoaPerformanceEngine:
             TSS = (sec * NP * IF) / (FTP * 3600) * 100
             IF = NP / FTP
         """
-        if duration_sec <= 0 or normalized_power_w <= 0 or ftp_watts <= 0:
-            raise ValueError("duration_sec, normalized_power_w, and ftp_watts must be > 0.")
+        if duration_sec <= 0:
+            raise ValueError("duration_sec must be > 0.")
+        if normalized_power_w <= 0:
+            raise ValueError("normalized_power_w must be > 0.")
+        if ftp_watts <= 0:
+            raise ValueError("ftp_watts must be > 0.")
 
         intensity_factor = normalized_power_w / ftp_watts
         tss = (duration_sec * normalized_power_w * intensity_factor) / (ftp_watts * 3600.0) * 100.0
@@ -476,10 +503,16 @@ class NoaPerformanceEngine:
     ) -> float:
         """
         HR proxy load when power is unavailable.
-        This is intentionally conservative and should be tagged as inferred load.
+        This should be tagged as inferred load.
         """
-        if duration_sec <= 0 or avg_hr <= 0 or threshold_hr <= 0:
-            raise ValueError("duration_sec, avg_hr, and threshold_hr must be > 0.")
+        if duration_sec <= 0:
+            raise ValueError("duration_sec must be > 0.")
+        if avg_hr <= 0:
+            raise ValueError("avg_hr must be > 0.")
+        if threshold_hr <= 0:
+            raise ValueError("threshold_hr must be > 0.")
+        if scaling_factor <= 0:
+            raise ValueError("scaling_factor must be > 0.")
 
         intensity_factor = avg_hr / threshold_hr
         hours = duration_sec / 3600.0
