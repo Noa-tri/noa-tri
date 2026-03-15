@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime
+
 from sqlalchemy import String, DateTime, Float, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
 
 from app.models.base import Base
 
@@ -25,5 +26,11 @@ class Athlete(Base):
     threshold_hr: Mapped[int | None] = mapped_column(Integer)
 
     vo2max: Mapped[float | None] = mapped_column(Float)
+
+    # =========================================================
+    # GARMIN
+    # =========================================================
+
+    garmin_access_token: Mapped[str | None] = mapped_column(String(500))
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
