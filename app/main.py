@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 from sqlalchemy import text
 
-from app.api.routes.athletes import router as athletes_router
-from app.api.routes.sessions import router as sessions_router
-from app.api.routes.biomarkers import router as biomarkers_router
 from app.api.routes.analytics import router as analytics_router
-from app.api.routes.risk import router as risk_router
+from app.api.routes.athletes import router as athletes_router
+from app.api.routes.biomarkers import router as biomarkers_router
 from app.api.routes.dashboard import router as dashboard_router
+from app.api.routes.profiling import router as profiling_router
+from app.api.routes.risk import router as risk_router
+from app.api.routes.sessions import router as sessions_router
+from app.api.routes.telemetry import router as telemetry_router
 from app.api.routes.training_plan import router as training_plan_router
 
 from app.core.config import settings
@@ -35,6 +37,8 @@ app.include_router(analytics_router, prefix=settings.API_V1_PREFIX)
 app.include_router(risk_router, prefix=settings.API_V1_PREFIX)
 app.include_router(dashboard_router, prefix=settings.API_V1_PREFIX)
 app.include_router(training_plan_router, prefix=settings.API_V1_PREFIX)
+app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
+app.include_router(profiling_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
