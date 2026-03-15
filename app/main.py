@@ -9,6 +9,7 @@ from app.api.routes.profiling import router as profiling_router
 from app.api.routes.risk import router as risk_router
 from app.api.routes.sessions import router as sessions_router
 from app.api.routes.telemetry import router as telemetry_router
+from app.api.routes.training_builder import router as training_builder_router
 from app.api.routes.training_plan import router as training_plan_router
 
 from app.core.config import settings
@@ -39,6 +40,7 @@ app.include_router(dashboard_router, prefix=settings.API_V1_PREFIX)
 app.include_router(training_plan_router, prefix=settings.API_V1_PREFIX)
 app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
 app.include_router(profiling_router, prefix=settings.API_V1_PREFIX)
+app.include_router(training_builder_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
