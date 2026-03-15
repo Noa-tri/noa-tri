@@ -5,6 +5,7 @@ from app.api.routes.analytics import router as analytics_router
 from app.api.routes.athletes import router as athletes_router
 from app.api.routes.biomarkers import router as biomarkers_router
 from app.api.routes.dashboard import router as dashboard_router
+from app.api.routes.debug_training import router as debug_training_router
 from app.api.routes.profiling import router as profiling_router
 from app.api.routes.risk import router as risk_router
 from app.api.routes.sessions import router as sessions_router
@@ -41,6 +42,7 @@ app.include_router(training_plan_router, prefix=settings.API_V1_PREFIX)
 app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
 app.include_router(profiling_router, prefix=settings.API_V1_PREFIX)
 app.include_router(training_builder_router, prefix=settings.API_V1_PREFIX)
+app.include_router(debug_training_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
