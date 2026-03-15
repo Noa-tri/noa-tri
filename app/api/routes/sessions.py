@@ -8,6 +8,7 @@ from app.core.db import get_db
 from app.models.athlete import Athlete
 from app.models.training_session import TrainingSession
 from app.services.training_analysis import TrainingAnalysisService
+from app.services.fatigue_monitor import FatigueMonitorService
 
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
@@ -63,6 +64,10 @@ def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)
         session=session,
     )
 
+    fatigue = FatigueMonitorService(db).evaluate(
+        athlete_id=payload.athlete_id
+    )
+
     return {
         "session": {
             "id": str(session.id),
@@ -74,6 +79,7 @@ def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)
             "tss": session.tss,
         },
         "analysis": analysis,
+        "fatigue_monitor": fatigue,
     }
 
 
