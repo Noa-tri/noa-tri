@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +9,7 @@ from app.models.athlete import Athlete
 from app.models.daily_biomarker import DailyBiomarker
 from app.models.pmc_metric import PMCMetric
 from app.models.risk_assessment import RiskAssessment
+from app.services.load_metrics import LoadMetricsService
 
 
 router = APIRouter(
@@ -45,6 +47,8 @@ def athlete_dashboard(athlete_id: UUID, db: Session = Depends(get_db)):
         .first()
     )
 
+    load_metrics = LoadMetricsService(db).compute_weekly_metrics(athlete_id=athlete_id)
+
     return {
         "athlete": {
             "id": athlete.id,
@@ -68,6 +72,7 @@ def athlete_dashboard(athlete_id: UUID, db: Session = Depends(get_db)):
             "score": risk.risk_score if risk else None,
             "day": risk.day if risk else None,
         },
+        "weekly_load": load_metrics,
     }
 
 
@@ -101,6 +106,8 @@ def team_dashboard(db: Session = Depends(get_db)):
             .first()
         )
 
+        load_metrics = LoadMetricsService(db).compute_weekly_metrics(athlete_id=athlete.id)
+
         result.append(
             {
                 "id": athlete.id,
@@ -115,7 +122,43 @@ def team_dashboard(db: Session = Depends(get_db)):
                 "pmc_day": pmc.day if pmc else None,
                 "risk_level": risk.risk_level if risk else None,
                 "risk_score": risk.risk_score if risk else None,
+                "weekly_total_tss": load_metrics["total_tss"],
+                "weekly_monotony": load_metrics["monotony"],
+                "weekly_strain": load_metrics["strain"],
             }
         )
 
     return result
+
+
+@router.get("/load/{athlete_id}")
+def athlete_load_dashboard(
+    athlete_id: UUID,
+    reference_day: date | None = None,
+    db: Session = Depends(get_db),
+):
+    athlete = db.query(Athlete).filter(Athlete.id == athlete_id).first()
+
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Athlete not found")
+
+    return LoadMetricsService(db).compute_weekly_metrics(
+        athlete_id=athlete_id,
+        reference_day=reference_day,
+    )
+
+
+@router.get("/load/auto")
+def athlete_load_dashboard_auto(
+    reference_day: date | None = None,
+    db: Session = Depends(get_db),
+):
+    athlete = db.query(Athlete).order_by(Athlete.created_at.asc()).first()
+
+    if not athlete:
+        raise HTTPException(status_code=404, detail="No athletes found")
+
+    return LoadMetricsService(db).compute_weekly_metrics(
+        athlete_id=athlete.id,
+        reference_day=reference_day,
+    )
