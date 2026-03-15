@@ -5,22 +5,21 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.models.training_session import TrainingSession
 from app.models.athlete import Athlete
-from app.services.performance_pipeline import PerformancePipeline
+from app.models.training_session import TrainingSession
+from app.services.training_analysis import TrainingAnalysisService
 
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
-class SessionCreate(BaseModel):
+class TrainingSessionCreate(BaseModel):
 
     athlete_id: UUID
     sport: str
-
     start_time: str
-    duration_sec: int
 
+    duration_sec: int | None = None
     distance_m: float | None = None
 
     avg_hr: int | None = None
@@ -34,13 +33,9 @@ class SessionCreate(BaseModel):
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-def create_session(payload: SessionCreate, db: Session = Depends(get_db)):
+def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)):
 
-    athlete = (
-        db.query(Athlete)
-        .filter(Athlete.id == payload.athlete_id)
-        .first()
-    )
+    athlete = db.query(Athlete).filter(Athlete.id == payload.athlete_id).first()
 
     if not athlete:
         raise HTTPException(status_code=404, detail="Athlete not found")
@@ -63,15 +58,33 @@ def create_session(payload: SessionCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(session)
 
-    # --------------------------------------
-    # NOA automatic pipeline
-    # --------------------------------------
-
-    pipeline = PerformancePipeline(db)
-    pipeline.process_session(session.id)
+    analysis = TrainingAnalysisService(db).analyze_session(
+        athlete_id=payload.athlete_id,
+        session=session,
+    )
 
     return {
-        "id": session.id,
-        "athlete_id": session.athlete_id,
-        "status": "processed",
+        "session": {
+            "id": str(session.id),
+            "sport": session.sport,
+            "start_time": session.start_time,
+            "duration_sec": session.duration_sec,
+            "distance_m": session.distance_m,
+            "intensity_factor": session.intensity_factor,
+            "tss": session.tss,
+        },
+        "analysis": analysis,
     }
+
+
+@router.get("/{athlete_id}")
+def get_sessions(athlete_id: UUID, db: Session = Depends(get_db)):
+
+    sessions = (
+        db.query(TrainingSession)
+        .filter(TrainingSession.athlete_id == athlete_id)
+        .order_by(TrainingSession.start_time.desc())
+        .all()
+    )
+
+    return sessions
