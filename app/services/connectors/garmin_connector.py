@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 import requests
@@ -26,7 +26,6 @@ class GarminConnector:
     # =========================================================
 
     def _headers(self) -> Dict[str, str]:
-
         if not self.access_token:
             raise ValueError("Garmin access token not configured")
 
@@ -45,7 +44,6 @@ class GarminConnector:
         end_date: date,
         limit: int = 100,
     ) -> List[Dict]:
-
         url = f"{self.BASE_URL}/activitylist-service/activities/search/activities"
 
         params = {
@@ -58,6 +56,7 @@ class GarminConnector:
             url,
             headers=self._headers(),
             params=params,
+            timeout=30,
         )
 
         if response.status_code != 200:
@@ -67,17 +66,31 @@ class GarminConnector:
 
         return response.json()
 
+    def list_recent_activities(
+        self,
+        days_back: int = 7,
+        limit: int = 100,
+    ) -> List[Dict]:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=days_back)
+
+        return self.list_activities(
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit,
+        )
+
     # =========================================================
     # ACTIVITY DETAILS
     # =========================================================
 
     def get_activity(self, activity_id: int) -> Dict:
-
         url = f"{self.BASE_URL}/activity-service/activity/{activity_id}"
 
         response = requests.get(
             url,
             headers=self._headers(),
+            timeout=30,
         )
 
         if response.status_code != 200:
@@ -92,12 +105,12 @@ class GarminConnector:
     # =========================================================
 
     def download_fit(self, activity_id: int) -> bytes:
-
         url = f"{self.BASE_URL}/download-service/files/activity/{activity_id}"
 
         response = requests.get(
             url,
             headers=self._headers(),
+            timeout=60,
         )
 
         if response.status_code != 200:
