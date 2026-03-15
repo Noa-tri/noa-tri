@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 import logging
 
 from sqlalchemy.orm import Session
 
-from app.services.connectors.garmin_connector import GarminConnector
-from app.services.telemetry_ingestion_service import TelemetryIngestionService
-from app.services.synchronization.sync_repository import ExternalActivityRepository
 from app.models.external_activity import ExternalActivityStatus
+from app.services.connectors.garmin_connector import GarminConnector
+from app.services.synchronization.sync_repository import ExternalActivityRepository
+from app.services.telemetry_ingestion_service import TelemetryIngestionService
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class SynchronizationEngine:
     def sync_athlete(self, athlete_id: int) -> SyncResult:
         result = SyncResult()
 
-        activities = self.garmin_connector.list_recent_activities(athlete_id=athlete_id)
+        activities = self.garmin_connector.list_recent_activities()
         result.discovered = len(activities)
 
         for activity in activities:
@@ -51,7 +51,7 @@ class SynchronizationEngine:
                     result.processed += 1
                 else:
                     result.skipped += 1
-            except Exception as exc:
+            except Exception:
                 logger.exception(
                     "Synchronization failed for athlete_id=%s activity=%s",
                     athlete_id,
@@ -84,7 +84,7 @@ class SynchronizationEngine:
                 provider="garmin",
                 external_activity_id=external_activity_id,
                 activity_name=activity_payload.get("activityName"),
-                sport_type=activity_payload.get("activityType", {}).get("typeKey"),
+                sport_type=(activity_payload.get("activityType") or {}).get("typeKey"),
                 start_time=activity_payload.get("startTimeLocal"),
                 duration_seconds=activity_payload.get("duration"),
                 raw_payload=activity_payload,
@@ -101,8 +101,7 @@ class SynchronizationEngine:
 
         try:
             fit_bytes = self.garmin_connector.download_fit(
-                athlete_id=athlete_id,
-                activity_id=external_activity_id,
+                activity_id=int(external_activity_id),
             )
 
             self.external_activity_repo.mark_downloaded(ext_activity)
