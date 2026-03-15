@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
-import logging
 
 from sqlalchemy.orm import Session
 
 from app.models.external_activity import ExternalActivityStatus
 from app.services.connectors.garmin_connector import GarminConnector
 from app.services.synchronization.sync_repository import ExternalActivityRepository
-from app.services.telemetry_ingestion_service import TelemetryIngestionService
+from app.services.telemetry_ingestion import TelemetryIngestionService
 
 logger = logging.getLogger(__name__)
 
