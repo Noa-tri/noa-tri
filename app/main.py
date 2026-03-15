@@ -12,6 +12,7 @@ from app.api.routes.sessions import router as sessions_router
 from app.api.routes.telemetry import router as telemetry_router
 from app.api.routes.training_builder import router as training_builder_router
 from app.api.routes.training_plan import router as training_plan_router
+from app.api.routes.synchronization import router as synchronization_router
 
 from app.core.config import settings
 from app.core.db import engine
@@ -43,6 +44,7 @@ app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
 app.include_router(profiling_router, prefix=settings.API_V1_PREFIX)
 app.include_router(training_builder_router, prefix=settings.API_V1_PREFIX)
 app.include_router(debug_training_router, prefix=settings.API_V1_PREFIX)
+app.include_router(synchronization_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
