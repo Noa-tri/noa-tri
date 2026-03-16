@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>NOA TRI</title>
+<style>
+body{
+    font-family: Arial;
+    background:#0b1020;
+    color:white;
+    padding:40px;
+}
+button{
+    padding:10px 20px;
+    margin:10px;
+    font-size:16px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>NOA TRI</h1>
+
+<p>Frontend inicial</p>
+
+<button onclick="health()">Health</button>
+<button onclick="athletes()">Athletes</button>
+
+<pre id="output"></pre>
+
+<script>
+
+async function health(){
+    const r = await fetch("http://localhost:8000/health")
+    const d = await r.json()
+    document.getElementById("output").textContent =
+        JSON.stringify(d,null,2)
+}
+
+async function athletes(){
+    const r = await fetch("http://localhost:8000/api/v1/athletes")
+    const d = await r.json()
+    document.getElementById("output").textContent =
+        JSON.stringify(d,null,2)
+}
+
+</script>
+
+</body>
+</html>
