@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AppShell from "./layouts/AppShell";
+import AthleteDetailPage from "./pages/AthleteDetailPage";
 import AthletesPage from "./pages/AthletesPage";
 import BiomarkersPage from "./pages/BiomarkersPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -15,6 +16,7 @@ export default function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="athletes" element={<AthletesPage />} />
+        <Route path="athletes/:athleteId" element={<AthleteDetailPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="biomarkers" element={<BiomarkersPage />} />
         <Route path="planning" element={<PlanningPage />} />
