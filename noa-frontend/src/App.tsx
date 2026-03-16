@@ -1,7 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AppShell from "./layouts/AppShell";
+import AthletesPage from "./pages/AthletesPage";
+import BiomarkersPage from "./pages/BiomarkersPage";
 import DashboardPage from "./pages/DashboardPage";
+import PlanningPage from "./pages/PlanningPage";
+import RiskPage from "./pages/RiskPage";
+import SessionsPage from "./pages/SessionsPage";
 
 export default function App() {
   return (
@@ -9,11 +14,11 @@ export default function App() {
       <Route path="/" element={<AppShell />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="athletes" element={<DashboardPage />} />
-        <Route path="sessions" element={<DashboardPage />} />
-        <Route path="biomarkers" element={<DashboardPage />} />
-        <Route path="planning" element={<DashboardPage />} />
-        <Route path="risk" element={<DashboardPage />} />
+        <Route path="athletes" element={<AthletesPage />} />
+        <Route path="sessions" element={<SessionsPage />} />
+        <Route path="biomarkers" element={<BiomarkersPage />} />
+        <Route path="planning" element={<PlanningPage />} />
+        <Route path="risk" element={<RiskPage />} />
       </Route>
     </Routes>
   );
