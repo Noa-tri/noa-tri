@@ -1,7 +1,9 @@
 import { ArrowUpRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const athletes = [
   {
+    id: "lucia-fernandez",
     name: "Lucía Fernández",
     level: "Elite",
     sport: "Triathlon",
@@ -12,6 +14,7 @@ const athletes = [
     status: "Ready",
   },
   {
+    id: "tomas-rivas",
     name: "Tomás Rivas",
     level: "Competitive",
     sport: "Ironman",
@@ -22,6 +25,7 @@ const athletes = [
     status: "Fatigue",
   },
   {
+    id: "valentina-costa",
     name: "Valentina Costa",
     level: "Elite",
     sport: "Olympic Distance",
@@ -71,7 +75,7 @@ export default function AthletesPage() {
 
       <section className="grid gap-4 xl:grid-cols-3">
         {athletes.map((athlete) => (
-          <div key={athlete.name} className="panel p-5">
+          <div key={athlete.id} className="panel p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-lg font-semibold text-white">{athlete.name}</p>
@@ -116,10 +120,13 @@ export default function AthletesPage() {
               </div>
             </div>
 
-            <button className="mt-5 flex items-center gap-2 text-sm font-semibold text-noa-accent">
+            <Link
+              to={`/athletes/${athlete.id}`}
+              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-noa-accent"
+            >
               Open profile
               <ArrowUpRight size={16} />
-            </button>
+            </Link>
           </div>
         ))}
       </section>
