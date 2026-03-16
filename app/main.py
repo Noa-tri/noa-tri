@@ -26,6 +26,7 @@ from app.models.training_plan import TrainingPlan
 from app.models.daily_biomarker import DailyBiomarker
 from app.models.pmc_metric import PMCMetric
 from app.models.risk_assessment import RiskAssessment
+from app.models.athlete_sync_state import AthleteSyncState
 
 
 app = FastAPI(
