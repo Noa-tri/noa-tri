@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.models.athlete_sync_state import AthleteSyncState, SyncProvider, SyncStatus
 from app.models.external_activity import ExternalActivityStatus
 from app.services.connectors.garmin_connector import GarminConnector
 from app.services.synchronization.sync_repository import ExternalActivityRepository
@@ -37,29 +39,57 @@ class SynchronizationEngine:
 
     def sync_athlete(self, athlete_id: int) -> SyncResult:
         result = SyncResult()
+        sync_state = self._get_or_create_sync_state(athlete_id=athlete_id)
 
-        activities = self.garmin_connector.list_recent_activities()
-        result.discovered = len(activities)
+        try:
+            sync_state.status = SyncStatus.running
+            sync_state.last_error = None
+            self.db.commit()
 
-        for activity in activities:
-            try:
-                processed = self._process_activity(
-                    athlete_id=athlete_id,
-                    activity_payload=activity,
-                )
-                if processed:
-                    result.processed += 1
-                else:
-                    result.skipped += 1
-            except Exception:
-                logger.exception(
-                    "Synchronization failed for athlete_id=%s activity=%s",
-                    athlete_id,
-                    activity.get("activityId"),
-                )
-                result.failed += 1
+            activities = self.garmin_connector.list_recent_activities()
+            result.discovered = len(activities)
 
-        return result
+            for activity in activities:
+                try:
+                    processed = self._process_activity(
+                        athlete_id=athlete_id,
+                        activity_payload=activity,
+                    )
+                    if processed:
+                        result.processed += 1
+                    else:
+                        result.skipped += 1
+                except Exception:
+                    logger.exception(
+                        "Synchronization failed for athlete_id=%s activity=%s",
+                        athlete_id,
+                        activity.get("activityId"),
+                    )
+                    result.failed += 1
+
+            sync_state.status = SyncStatus.success if result.failed == 0 else SyncStatus.failed
+            sync_state.last_synced_at = datetime.utcnow()
+            sync_state.consecutive_failures = 0 if result.failed == 0 else sync_state.consecutive_failures + 1
+
+            if activities:
+                last_activity_id = activities[0].get("activityId")
+                if last_activity_id is not None:
+                    sync_state.last_activity_id = str(last_activity_id)
+
+            if result.failed > 0:
+                sync_state.last_error = f"{result.failed} activity errors during synchronization"
+            else:
+                sync_state.last_error = None
+
+            self.db.commit()
+            return result
+
+        except Exception as exc:
+            sync_state.status = SyncStatus.failed
+            sync_state.last_error = str(exc)[:1000]
+            sync_state.consecutive_failures += 1
+            self.db.commit()
+            raise
 
     def _process_activity(self, athlete_id: int, activity_payload: dict[str, Any]) -> bool:
         external_activity_id = str(activity_payload["activityId"])
@@ -132,3 +162,27 @@ class SynchronizationEngine:
             self.external_activity_repo.mark_failed(ext_activity, str(exc))
             self.db.commit()
             raise
+
+    def _get_or_create_sync_state(self, athlete_id: int) -> AthleteSyncState:
+        sync_state = (
+            self.db.query(AthleteSyncState)
+            .filter(
+                AthleteSyncState.athlete_id == athlete_id,
+                AthleteSyncState.provider == SyncProvider.garmin,
+            )
+            .first()
+        )
+
+        if sync_state:
+            return sync_state
+
+        sync_state = AthleteSyncState(
+            athlete_id=athlete_id,
+            provider=SyncProvider.garmin,
+            status=SyncStatus.idle,
+            consecutive_failures=0,
+        )
+        self.db.add(sync_state)
+        self.db.commit()
+        self.db.refresh(sync_state)
+        return sync_state
