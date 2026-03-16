@@ -132,6 +132,18 @@ class TelemetryIngestionService:
         if parsed.session.start_time is None:
             raise ValueError("FIT session start_time not found.")
 
+        existing_session = (
+            self.db.query(TrainingSession)
+            .filter(
+                TrainingSession.athlete_id == athlete.id,
+                TrainingSession.start_time == parsed.session.start_time,
+            )
+            .first()
+        )
+
+        if existing_session:
+            return existing_session
+
         duration_sec = int(parsed.session.total_elapsed_time_sec or 0)
 
         session = TrainingSession(
