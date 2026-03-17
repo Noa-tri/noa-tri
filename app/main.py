@@ -6,6 +6,7 @@ from app.api.routes.athletes import router as athletes_router
 from app.api.routes.biomarkers import router as biomarkers_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.debug_training import router as debug_training_router
+from app.api.routes.organizations import router as organizations_router
 from app.api.routes.profiling import router as profiling_router
 from app.api.routes.risk import router as risk_router
 from app.api.routes.sessions import router as sessions_router
@@ -34,6 +35,7 @@ app = FastAPI(
     debug=settings.APP_DEBUG,
 )
 
+app.include_router(organizations_router, prefix=settings.API_V1_PREFIX)
 app.include_router(athletes_router, prefix=settings.API_V1_PREFIX)
 app.include_router(sessions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(biomarkers_router, prefix=settings.API_V1_PREFIX)
