@@ -15,6 +15,7 @@ type AthleteFormState = {
   ftp_watts: string;
   threshold_hr: string;
   vo2max: string;
+  garmin_access_token: string;
 };
 
 const initialFormState: AthleteFormState = {
@@ -26,6 +27,7 @@ const initialFormState: AthleteFormState = {
   ftp_watts: "",
   threshold_hr: "",
   vo2max: "",
+  garmin_access_token: "",
 };
 
 function toNullableNumber(value: string): number | null {
@@ -38,16 +40,16 @@ function toNullableNumber(value: string): number | null {
 }
 
 function athleteStatus(athlete: Athlete): { label: string; className: string } {
-  if ((athlete.vo2max ?? 0) >= 60) {
+  if (athlete.garmin_access_token) {
     return {
-      label: "Ready",
+      label: "Connected",
       className: "bg-noa-success/15 text-noa-success",
     };
   }
 
-  if ((athlete.threshold_hr ?? 0) >= 160) {
+  if ((athlete.vo2max ?? 0) >= 60) {
     return {
-      label: "Build",
+      label: "Ready",
       className: "bg-noa-blue/15 text-noa-blue",
     };
   }
@@ -69,11 +71,6 @@ export default function AthletesPage() {
   const [formState, setFormState] = useState<AthleteFormState>(initialFormState);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-
-  async function loadAthletes() {
-    const data = await apiGet<Athlete[]>("/athletes/");
-    setAthletes(data);
-  }
 
   async function loadOrganizations() {
     const data = await apiGet<Organization[]>("/organizations/");
@@ -160,6 +157,7 @@ export default function AthletesPage() {
       ftp_watts: toNullableNumber(formState.ftp_watts),
       threshold_hr: toNullableNumber(formState.threshold_hr),
       vo2max: toNullableNumber(formState.vo2max),
+      garmin_access_token: formState.garmin_access_token.trim() || null,
     };
 
     try {
@@ -275,9 +273,9 @@ export default function AthletesPage() {
                     </div>
 
                     <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-noa-muted">Weight</p>
-                      <p className="mt-2 text-2xl font-bold text-white">
-                        {athlete.weight_kg ?? "--"}
+                      <p className="text-xs uppercase tracking-[0.2em] text-noa-muted">Garmin</p>
+                      <p className="mt-2 text-sm font-bold text-white">
+                        {athlete.garmin_access_token ? "Connected" : "Not connected"}
                       </p>
                     </div>
                   </div>
@@ -410,6 +408,18 @@ export default function AthletesPage() {
                       setFormState((prev) => ({ ...prev, vo2max: event.target.value }))
                     }
                     className="w-full rounded-2xl border border-noa-line bg-noa-panel2 px-4 py-3 text-white outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-white">Garmin access token</label>
+                  <input
+                    value={formState.garmin_access_token}
+                    onChange={(event) =>
+                      setFormState((prev) => ({ ...prev, garmin_access_token: event.target.value }))
+                    }
+                    className="w-full rounded-2xl border border-noa-line bg-noa-panel2 px-4 py-3 text-white outline-none"
+                    placeholder="Paste Garmin access token"
                   />
                 </div>
               </div>
