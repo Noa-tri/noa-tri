@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  Building2,
   CalendarRange,
   HeartPulse,
   LayoutDashboard,
@@ -11,6 +12,7 @@ import { NavLink } from "react-router-dom";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/organizations", label: "Organizations", icon: Building2 },
   { to: "/athletes", label: "Athletes", icon: Users },
   { to: "/sessions", label: "Sessions", icon: Activity },
   { to: "/biomarkers", label: "Biomarkers", icon: HeartPulse },
