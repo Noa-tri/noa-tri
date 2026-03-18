@@ -4,19 +4,32 @@ import {
   ArrowLeft,
   CalendarRange,
   HeartPulse,
+  RefreshCw,
   ShieldAlert,
   TimerReset,
+  Wifi,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
-import { apiGet } from "../lib/api";
+import { apiGet, apiPost } from "../lib/api";
 import type { Athlete } from "../types/athlete";
+
+type SyncResponse = {
+  discovered: number;
+  processed: number;
+  skipped: number;
+  failed: number;
+};
 
 export default function AthleteDetailPage() {
   const { athleteId } = useParams();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
+
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncResult, setSyncResult] = useState<SyncResponse | null>(null);
 
   useEffect(() => {
     async function loadAthlete() {
@@ -41,12 +54,27 @@ export default function AthleteDetailPage() {
     loadAthlete();
   }, [athleteId]);
 
+  async function handleSyncGarmin() {
+    if (!athleteId) {
+      return;
+    }
+
+    try {
+      setSyncLoading(true);
+      setSyncError(null);
+      setSyncResult(null);
+
+      const result = await apiPost<SyncResponse>(`/sync/athletes/${athleteId}/garmin`, {});
+      setSyncResult(result);
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : "Failed to synchronize Garmin");
+    } finally {
+      setSyncLoading(false);
+    }
+  }
+
   if (loading) {
-    return (
-      <div className="panel p-8 text-sm text-noa-muted">
-        Loading athlete...
-      </div>
-    );
+    return <div className="panel p-8 text-sm text-noa-muted">Loading athlete...</div>;
   }
 
   if (pageError || !athlete) {
@@ -85,6 +113,25 @@ export default function AthleteDetailPage() {
             <p className="mt-3 text-sm leading-6 text-noa-muted">
               Organization: {athlete.organization_id}
             </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={handleSyncGarmin}
+                disabled={syncLoading}
+                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-noa-accent to-noa-blue px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
+              >
+                <Wifi size={16} />
+                {syncLoading ? "Synchronizing..." : "Sync Garmin"}
+              </button>
+
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center gap-2 rounded-2xl border border-noa-line bg-noa-panel2 px-5 py-3 text-sm font-semibold text-white"
+              >
+                <RefreshCw size={16} />
+                Refresh athlete
+              </button>
+            </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="metric-card">
@@ -131,6 +178,36 @@ export default function AthleteDetailPage() {
                 </span>
               </div>
             </div>
+
+            {syncResult && (
+              <div className="mt-4 rounded-2xl border border-noa-success/30 bg-noa-success/10 p-4">
+                <p className="text-sm font-semibold text-noa-success">Garmin sync completed</p>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-xl bg-noa-panel2 p-3">
+                    <span className="text-noa-muted">Discovered</span>
+                    <p className="mt-1 font-semibold text-white">{syncResult.discovered}</p>
+                  </div>
+                  <div className="rounded-xl bg-noa-panel2 p-3">
+                    <span className="text-noa-muted">Processed</span>
+                    <p className="mt-1 font-semibold text-white">{syncResult.processed}</p>
+                  </div>
+                  <div className="rounded-xl bg-noa-panel2 p-3">
+                    <span className="text-noa-muted">Skipped</span>
+                    <p className="mt-1 font-semibold text-white">{syncResult.skipped}</p>
+                  </div>
+                  <div className="rounded-xl bg-noa-panel2 p-3">
+                    <span className="text-noa-muted">Failed</span>
+                    <p className="mt-1 font-semibold text-white">{syncResult.failed}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {syncError && (
+              <div className="mt-4 rounded-2xl border border-noa-danger/30 bg-noa-danger/10 p-4 text-sm text-noa-danger">
+                {syncError}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -260,7 +337,7 @@ export default function AthleteDetailPage() {
 
             <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
               <p className="text-sm text-noa-muted">Organization</p>
-              <p className="mt-2 text-sm font-medium break-all text-white">{athlete.organization_id}</p>
+              <p className="mt-2 break-all text-sm font-medium text-white">{athlete.organization_id}</p>
             </div>
 
             <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
