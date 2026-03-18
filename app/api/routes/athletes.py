@@ -21,6 +21,7 @@ def create_athlete(payload: AthleteCreate, db: Session = Depends(get_db)) -> Ath
         ftp_watts=payload.ftp_watts,
         threshold_hr=payload.threshold_hr,
         vo2max=payload.vo2max,
+        garmin_access_token=payload.garmin_access_token,
     )
     db.add(athlete)
     db.commit()
