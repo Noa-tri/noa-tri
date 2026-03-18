@@ -1,27 +1,34 @@
-from pydantic import BaseModel
-from uuid import UUID
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict
 
 
-class AthleteBase(BaseModel):
+class AthleteCreate(BaseModel):
+    organization_id: UUID
     first_name: str
     last_name: str
-    weight_kg: Optional[float] = None
-    height_cm: Optional[float] = None
-    ftp_watts: Optional[int] = None
-    threshold_hr: Optional[int] = None
-    vo2max: Optional[float] = None
+    weight_kg: float | None = None
+    height_cm: float | None = None
+    ftp_watts: int | None = None
+    threshold_hr: int | None = None
+    vo2max: float | None = None
+    garmin_access_token: str | None = None
 
 
-class AthleteCreate(AthleteBase):
-    organization_id: UUID
+class AthleteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-
-class AthleteResponse(AthleteBase):
     id: UUID
     organization_id: UUID
+    first_name: str
+    last_name: str
+    weight_kg: float | None
+    height_cm: float | None
+    ftp_watts: int | None
+    threshold_hr: int | None
+    vo2max: float | None
+    garmin_access_token: str | None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
