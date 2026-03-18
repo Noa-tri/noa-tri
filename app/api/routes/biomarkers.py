@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -37,3 +39,17 @@ def create_biomarker(payload: BiomarkerCreate, db: Session = Depends(get_db)) ->
         .first()
     )
     return saved
+
+
+@router.get("/{athlete_id}", response_model=list[BiomarkerResponse])
+def get_biomarkers(athlete_id: UUID, db: Session = Depends(get_db)) -> list[DailyBiomarker]:
+    athlete = db.query(Athlete).filter(Athlete.id == athlete_id).first()
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Athlete not found")
+
+    return (
+        db.query(DailyBiomarker)
+        .filter(DailyBiomarker.athlete_id == athlete_id)
+        .order_by(DailyBiomarker.day.desc())
+        .all()
+    )
