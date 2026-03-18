@@ -26,7 +26,6 @@ class TrainingPlanCreate(BaseModel):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_training_plan(payload: TrainingPlanCreate, db: Session = Depends(get_db)):
-
     athlete = (
         db.query(Athlete)
         .filter(Athlete.id == payload.athlete_id)
@@ -62,3 +61,37 @@ def create_training_plan(payload: TrainingPlanCreate, db: Session = Depends(get_
         "planned_tss": plan.planned_tss,
         "coach_notes": plan.coach_notes,
     }
+
+
+@router.get("/{athlete_id}")
+def list_training_plans(athlete_id: UUID, db: Session = Depends(get_db)):
+    athlete = (
+        db.query(Athlete)
+        .filter(Athlete.id == athlete_id)
+        .first()
+    )
+
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Athlete not found")
+
+    plans = (
+        db.query(TrainingPlan)
+        .filter(TrainingPlan.athlete_id == athlete_id)
+        .order_by(TrainingPlan.planned_date.desc())
+        .all()
+    )
+
+    return [
+        {
+            "id": str(plan.id),
+            "athlete_id": str(plan.athlete_id),
+            "sport": plan.sport,
+            "planned_date": plan.planned_date,
+            "planned_duration_sec": plan.planned_duration_sec,
+            "planned_distance_m": plan.planned_distance_m,
+            "planned_intensity_factor": plan.planned_intensity_factor,
+            "planned_tss": plan.planned_tss,
+            "coach_notes": plan.coach_notes,
+        }
+        for plan in plans
+    ]
