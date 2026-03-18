@@ -8,6 +8,7 @@ export type Athlete = {
   ftp_watts: number | null;
   threshold_hr: number | null;
   vo2max: number | null;
+  garmin_access_token: string | null;
   created_at: string;
 };
 
@@ -20,4 +21,5 @@ export type AthleteCreatePayload = {
   ftp_watts: number | null;
   threshold_hr: number | null;
   vo2max: number | null;
+  garmin_access_token: string | null;
 };
