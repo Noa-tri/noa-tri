@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import { apiGet, apiPost } from "../lib/api";
 import type { Athlete, AthleteCreatePayload } from "../types/athlete";
+import type { Organization } from "../types/organization";
 
 type AthleteFormState = {
   organization_id: string;
@@ -59,6 +60,7 @@ function athleteStatus(athlete: Athlete): { label: string; className: string } {
 
 export default function AthletesPage() {
   const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -69,11 +71,28 @@ export default function AthletesPage() {
   const [createError, setCreateError] = useState<string | null>(null);
 
   async function loadAthletes() {
+    const data = await apiGet<Athlete[]>("/athletes/");
+    setAthletes(data);
+  }
+
+  async function loadOrganizations() {
+    const data = await apiGet<Organization[]>("/organizations/");
+    setOrganizations(data);
+    return data;
+  }
+
+  async function loadPage() {
     try {
       setLoading(true);
       setPageError(null);
-      const data = await apiGet<Athlete[]>("/athletes/");
-      setAthletes(data);
+
+      const [athletesData, organizationsData] = await Promise.all([
+        apiGet<Athlete[]>("/athletes/"),
+        apiGet<Organization[]>("/organizations/"),
+      ]);
+
+      setAthletes(athletesData);
+      setOrganizations(organizationsData);
     } catch (error) {
       setPageError(error instanceof Error ? error.message : "Failed to load athletes");
     } finally {
@@ -82,8 +101,12 @@ export default function AthletesPage() {
   }
 
   useEffect(() => {
-    loadAthletes();
+    loadPage();
   }, []);
+
+  const organizationMap = useMemo(() => {
+    return new Map(organizations.map((org) => [org.id, org]));
+  }, [organizations]);
 
   const filteredAthletes = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -94,13 +117,33 @@ export default function AthletesPage() {
 
     return athletes.filter((athlete) => {
       const fullName = `${athlete.first_name} ${athlete.last_name}`.toLowerCase();
+      const orgName = organizationMap.get(athlete.organization_id)?.name?.toLowerCase() ?? "";
+
       return (
         fullName.includes(term) ||
         athlete.first_name.toLowerCase().includes(term) ||
-        athlete.last_name.toLowerCase().includes(term)
+        athlete.last_name.toLowerCase().includes(term) ||
+        orgName.includes(term)
       );
     });
-  }, [athletes, search]);
+  }, [athletes, search, organizationMap]);
+
+  async function handleOpenCreateModal() {
+    setCreateError(null);
+
+    try {
+      if (organizations.length === 0) {
+        const orgs = await loadOrganizations();
+        if (orgs.length === 0) {
+          setCreateError("First create an organization in the Organizations section.");
+        }
+      }
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Failed to load organizations");
+    }
+
+    setIsCreateOpen(true);
+  }
 
   async function handleCreateAthlete(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -144,10 +187,7 @@ export default function AthletesPage() {
           </div>
 
           <button
-            onClick={() => {
-              setCreateError(null);
-              setIsCreateOpen(true);
-            }}
+            onClick={handleOpenCreateModal}
             className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-noa-accent to-noa-blue px-4 py-3 text-sm font-semibold text-slate-950"
           >
             <Plus size={16} />
@@ -170,7 +210,7 @@ export default function AthletesPage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">Roster</h2>
           <button
-            onClick={loadAthletes}
+            onClick={loadPage}
             className="rounded-2xl border border-noa-line bg-noa-panel2 px-4 py-2 text-sm font-medium text-white"
           >
             Refresh
@@ -193,6 +233,7 @@ export default function AthletesPage() {
           <div className="grid gap-4 xl:grid-cols-3">
             {filteredAthletes.map((athlete) => {
               const status = athleteStatus(athlete);
+              const organization = organizationMap.get(athlete.organization_id);
 
               return (
                 <div key={athlete.id} className="panel p-5">
@@ -202,7 +243,7 @@ export default function AthletesPage() {
                         {athlete.first_name} {athlete.last_name}
                       </p>
                       <p className="mt-1 text-sm text-noa-muted">
-                        Org: {athlete.organization_id}
+                        {organization?.name ?? athlete.organization_id}
                       </p>
                     </div>
 
@@ -274,16 +315,22 @@ export default function AthletesPage() {
 
             <form onSubmit={handleCreateAthlete} className="mt-6 space-y-5">
               <div>
-                <label className="mb-2 block text-sm font-medium text-white">Organization ID</label>
-                <input
+                <label className="mb-2 block text-sm font-medium text-white">Organization</label>
+                <select
                   value={formState.organization_id}
                   onChange={(event) =>
                     setFormState((prev) => ({ ...prev, organization_id: event.target.value }))
                   }
                   required
                   className="w-full rounded-2xl border border-noa-line bg-noa-panel2 px-4 py-3 text-white outline-none"
-                  placeholder="UUID of organization"
-                />
+                >
+                  <option value="">Select organization</option>
+                  {organizations.map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
