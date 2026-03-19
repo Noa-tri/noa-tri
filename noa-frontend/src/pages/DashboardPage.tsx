@@ -3,9 +3,14 @@ import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
+  BarChart3,
+  Building2,
+  CalendarRange,
   HeartPulse,
+  Microscope,
   TimerReset,
   TrendingUp,
+  Users,
   Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -51,6 +56,45 @@ function riskBadgeClass(risk: string | null): string {
   return "bg-noa-blue/15 text-noa-blue";
 }
 
+const quickLinks = [
+  {
+    to: "/organizations",
+    title: "Organizations",
+    description: "Create team structures before adding athletes.",
+    icon: Building2,
+  },
+  {
+    to: "/athletes",
+    title: "Athletes",
+    description: "Create athletes and open their coach profile.",
+    icon: Users,
+  },
+  {
+    to: "/planning",
+    title: "Planning",
+    description: "Create and review planned training sessions.",
+    icon: CalendarRange,
+  },
+  {
+    to: "/performance-tests",
+    title: "Performance Tests",
+    description: "Register tests used for model calibration.",
+    icon: Microscope,
+  },
+  {
+    to: "/daily-loads",
+    title: "Daily Loads",
+    description: "Inspect aggregated daily load by sport.",
+    icon: BarChart3,
+  },
+  {
+    to: "/nlss",
+    title: "NLSS",
+    description: "Calibrate physiological model parameters.",
+    icon: TimerReset,
+  },
+];
+
 export default function DashboardPage() {
   const [teamData, setTeamData] = useState<TeamDashboardAthlete[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,15 +137,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <section className="panel overflow-hidden">
-        <div className="grid gap-8 p-6 md:grid-cols-[1.35fr_0.65fr] md:p-8">
+        <div className="grid gap-8 p-6 md:grid-cols-[1.2fr_0.8fr] md:p-8">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-noa-muted">Coach Command Center</p>
-            <h1 className="mt-3 max-w-2xl text-4xl font-semibold leading-tight text-white">
-              Team performance intelligence, now connected to real backend data.
+            <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight text-white">
+              NOA TRI operational dashboard for coaching, planning and modeling.
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-noa-muted">
-              Supervisá carga, riesgo, HRV y adaptación de tu squad desde una vista operativa
-              central.
+              Usá este panel como punto de entrada real del producto: estructura, atletas,
+              planificación, sesiones, carga diaria y calibración NLSS.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -113,10 +157,10 @@ export default function DashboardPage() {
               </button>
 
               <Link
-                to="/athletes"
+                to="/organizations"
                 className="rounded-2xl border border-noa-line bg-noa-panel2 px-5 py-3 text-sm font-semibold text-white"
               >
-                Open athletes
+                Start with organizations
               </Link>
             </div>
           </div>
@@ -135,10 +179,20 @@ export default function DashboardPage() {
             </div>
 
             <p className="mt-4 text-sm leading-6 text-noa-muted">
-              Team dashboard aggregated from athletes, PMC metrics, biomarkers and risk state.
+              Aggregated from athlete records, PMC metrics, biomarkers, risk and weekly load.
             </p>
 
-            <div className="mt-6 h-32 rounded-2xl border border-noa-line bg-hero-grid bg-[size:20px_20px]" />
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-noa-line bg-noa-panel p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-noa-muted">Avg CTL</p>
+                <p className="mt-2 text-2xl font-bold text-white">{summary.avgCtl}</p>
+              </div>
+
+              <div className="rounded-2xl border border-noa-line bg-noa-panel p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-noa-muted">Weekly TSS</p>
+                <p className="mt-2 text-2xl font-bold text-white">{summary.weeklyTss}</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -211,77 +265,45 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="panel p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-lg font-semibold text-white">Team performance table</p>
+              <p className="text-lg font-semibold text-white">Recommended test flow</p>
               <p className="mt-1 text-sm text-noa-muted">
-                Real values from dashboard team endpoint
+                Usá este orden para probar el producto de punta a punta.
               </p>
             </div>
 
             <span className="rounded-full border border-noa-line bg-noa-panel2 px-3 py-1 text-xs font-semibold text-noa-muted">
-              Live
+              Guided
             </span>
           </div>
 
-          {loading ? (
-            <div className="mt-6 flex h-[340px] items-center justify-center rounded-[28px] border border-dashed border-noa-line bg-noa-panel2 text-noa-muted">
-              Loading dashboard...
-            </div>
-          ) : teamData.length === 0 ? (
-            <div className="mt-6 flex h-[340px] items-center justify-center rounded-[28px] border border-dashed border-noa-line bg-noa-panel2 text-noa-muted">
-              No team data found
-            </div>
-          ) : (
-            <div className="mt-6 overflow-x-auto">
-              <table className="min-w-full border-collapse">
-                <thead className="bg-noa-panel2">
-                  <tr className="text-left">
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">Athlete</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">CTL</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">ATL</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">TSB</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">HRV</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">FTP</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">VO2max</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">Risk</th>
-                    <th className="px-4 py-4 text-xs uppercase tracking-[0.2em] text-noa-muted">Weekly TSS</th>
-                  </tr>
-                </thead>
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {quickLinks.map((item) => {
+              const Icon = item.icon;
 
-                <tbody>
-                  {teamData.map((athlete) => (
-                    <tr
-                      key={athlete.id}
-                      className="border-t border-noa-line/80 bg-noa-panel/40"
-                    >
-                      <td className="px-4 py-4 text-sm font-medium text-white">
-                        <Link to={`/athletes/${athlete.id}`} className="hover:text-noa-accent">
-                          {athlete.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-4 text-sm text-white">{athlete.ctl ?? "--"}</td>
-                      <td className="px-4 py-4 text-sm text-white">{athlete.atl ?? "--"}</td>
-                      <td className="px-4 py-4 text-sm text-white">{athlete.tsb ?? "--"}</td>
-                      <td className="px-4 py-4 text-sm text-white">{athlete.hrv_rmssd ?? "--"}</td>
-                      <td className="px-4 py-4 text-sm text-white">{athlete.ftp ?? "--"}</td>
-                      <td className="px-4 py-4 text-sm text-white">{athlete.vo2max ?? "--"}</td>
-                      <td className="px-4 py-4">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${riskBadgeClass(athlete.risk)}`}>
-                          {athlete.risk ?? "--"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-sm font-semibold text-white">
-                        {athlete.weekly_total_tss ?? "--"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="rounded-3xl border border-noa-line bg-noa-panel2 p-5 transition hover:border-white/15 hover:bg-noa-panel"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="rounded-2xl bg-noa-panel p-3 text-noa-accent">
+                      <Icon size={18} />
+                    </div>
+
+                    <ArrowUpRight size={16} className="text-noa-muted" />
+                  </div>
+
+                  <p className="mt-4 text-lg font-semibold text-white">{item.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-noa-muted">{item.description}</p>
+                </Link>
+              );
+            })}
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -326,41 +348,39 @@ export default function DashboardPage() {
           </div>
 
           <div className="panel p-6">
-            <p className="text-lg font-semibold text-white">Coach quick navigation</p>
+            <p className="text-lg font-semibold text-white">Team performance table</p>
+            <p className="mt-1 text-sm text-noa-muted">Real values from dashboard team endpoint</p>
 
-            <div className="mt-4 space-y-3">
-              <Link
-                to="/athletes"
-                className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4 text-sm text-white"
-              >
-                <span>Athletes</span>
-                <ArrowUpRight size={16} />
-              </Link>
+            {loading ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-noa-line bg-noa-panel2 p-6 text-sm text-noa-muted">
+                Loading dashboard...
+              </div>
+            ) : teamData.length === 0 ? (
+              <div className="mt-6 rounded-2xl border border-dashed border-noa-line bg-noa-panel2 p-6 text-sm text-noa-muted">
+                No team data found.
+              </div>
+            ) : (
+              <div className="mt-6 space-y-3">
+                {teamData.slice(0, 5).map((athlete) => (
+                  <Link
+                    key={athlete.id}
+                    to={`/athletes/${athlete.id}`}
+                    className="block rounded-2xl border border-noa-line bg-noa-panel2 p-4 transition hover:border-white/15"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">{athlete.name}</p>
+                        <p className="mt-1 text-xs text-noa-muted">
+                          CTL {athlete.ctl ?? "--"} · ATL {athlete.atl ?? "--"} · HRV {athlete.hrv_rmssd ?? "--"}
+                        </p>
+                      </div>
 
-              <Link
-                to="/sessions"
-                className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4 text-sm text-white"
-              >
-                <span>Sessions</span>
-                <ArrowUpRight size={16} />
-              </Link>
-
-              <Link
-                to="/biomarkers"
-                className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4 text-sm text-white"
-              >
-                <span>Biomarkers</span>
-                <ArrowUpRight size={16} />
-              </Link>
-
-              <Link
-                to="/planning"
-                className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4 text-sm text-white"
-              >
-                <span>Planning</span>
-                <ArrowUpRight size={16} />
-              </Link>
-            </div>
+                      <ArrowUpRight size={16} className="text-noa-muted" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
