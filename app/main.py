@@ -30,6 +30,7 @@ from app.models.pmc_metric import PMCMetric
 from app.models.risk_assessment import RiskAssessment
 from app.models.athlete_sync_state import AthleteSyncState
 from app.models.performance_test import PerformanceTest
+from app.models.athlete_daily_load import AthleteDailyLoad
 
 
 app = FastAPI(
