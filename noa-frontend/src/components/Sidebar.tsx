@@ -1,10 +1,12 @@
 import {
   Activity,
   AlertTriangle,
+  BarChart3,
   Building2,
   CalendarRange,
   HeartPulse,
   LayoutDashboard,
+  Microscope,
   TimerReset,
   Users,
 } from "lucide-react";
@@ -18,6 +20,9 @@ const items = [
   { to: "/biomarkers", label: "Biomarkers", icon: HeartPulse },
   { to: "/planning", label: "Planning", icon: CalendarRange },
   { to: "/risk", label: "Risk", icon: AlertTriangle },
+  { to: "/performance-tests", label: "Performance Tests", icon: Microscope },
+  { to: "/daily-loads", label: "Daily Loads", icon: BarChart3 },
+  { to: "/nlss", label: "NLSS", icon: TimerReset },
 ];
 
 export default function Sidebar() {
