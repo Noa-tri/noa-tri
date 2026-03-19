@@ -7,15 +7,15 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.athlete import Athlete
 from app.models.training_session import TrainingSession
-from app.services.training_analysis import TrainingAnalysisService
+from app.services.daily_load_service import DailyLoadService
 from app.services.fatigue_monitor import FatigueMonitorService
+from app.services.training_analysis import TrainingAnalysisService
 
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
 class TrainingSessionCreate(BaseModel):
-
     athlete_id: UUID
     sport: str
     start_time: str
@@ -35,7 +35,6 @@ class TrainingSessionCreate(BaseModel):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)):
-
     athlete = db.query(Athlete).filter(Athlete.id == payload.athlete_id).first()
 
     if not athlete:
@@ -68,6 +67,11 @@ def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)
         athlete_id=payload.athlete_id
     )
 
+    daily_load_rows = DailyLoadService(db).rebuild_athlete_day(
+        athlete_id=payload.athlete_id,
+        day=session.start_time.date(),
+    )
+
     return {
         "session": {
             "id": str(session.id),
@@ -80,12 +84,25 @@ def create_session(payload: TrainingSessionCreate, db: Session = Depends(get_db)
         },
         "analysis": analysis,
         "fatigue_monitor": fatigue,
+        "daily_load": [
+            {
+                "id": str(row.id),
+                "day": row.day,
+                "sport": row.sport,
+                "tss": row.tss,
+                "rtss": row.rtss,
+                "stss": row.stss,
+                "total_load": row.total_load,
+                "source_count": row.source_count,
+                "data_quality_score": row.data_quality_score,
+            }
+            for row in daily_load_rows
+        ],
     }
 
 
 @router.get("/{athlete_id}")
 def get_sessions(athlete_id: UUID, db: Session = Depends(get_db)):
-
     sessions = (
         db.query(TrainingSession)
         .filter(TrainingSession.athlete_id == athlete_id)
