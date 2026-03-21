@@ -1,37 +1,41 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PageHeader from "../components/layout/PageHeader";
-import { getOrganizations, type Organization } from "../lib/api";
 
 export default function OrganizationsPage() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<Organization[]>([]);
-
-  useEffect(() => {
-    getOrganizations().then(setItems).catch(() => setItems([]));
-  }, []);
 
   return (
-    <>
-      <PageHeader
-        title="Organizations"
-        subtitle="Entrada operativa para navegar atletas y planificación."
-      />
-
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((org) => (
-          <button
-            key={String(org.id)}
-            onClick={() => navigate(`/athletes?organizationId=${org.id}`)}
-            className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left transition hover:bg-white/10"
-          >
-            <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/80">Organization</p>
-            <h3 className="mt-3 text-xl font-semibold">{org.name}</h3>
-            <p className="mt-2 text-sm text-slate-300">{org.sport || "Triathlon"}</p>
-            <p className="mt-6 text-sm text-slate-400">{org.athletes_count ?? 0} athletes</p>
-          </button>
-        ))}
+    <div className="space-y-6">
+      <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-8 shadow-[0_0_0_1px_rgba(34,211,238,0.04)]">
+        <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/70">NOA TRI</p>
+        <h1 className="mt-3 text-4xl font-semibold text-white">Organizations</h1>
+        <p className="mt-3 max-w-3xl text-sm text-slate-400">
+          Punto de entrada operativo para navegar organización, atletas y planificación.
+        </p>
       </div>
-    </>
+
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <button
+          onClick={() => navigate("/athletes")}
+          className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-6 text-left transition hover:border-cyan-400/40 hover:bg-[#0b1d34]"
+        >
+          <div className="flex items-center justify-between">
+            <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300">
+              Triathlon
+            </span>
+            <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Organization</span>
+          </div>
+
+          <h3 className="mt-6 text-2xl font-semibold text-white">NOA TRI</h3>
+          <p className="mt-2 text-sm text-slate-400">
+            Acceso directo al flujo operativo completo.
+          </p>
+
+          <div className="mt-8 flex items-center justify-between">
+            <span className="text-sm text-slate-400">Open athletes</span>
+            <span className="text-sm font-medium text-cyan-300">Enter →</span>
+          </div>
+        </button>
+      </div>
+    </div>
   );
 }
