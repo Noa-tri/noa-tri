@@ -1,23 +1,32 @@
+import { Navigate, Route, Routes } from "react-router-dom";
+
+import AppShell from "./layouts/AppShell";
+import AthleteDetailPage from "./pages/AthleteDetailPage";
+import AthletesPage from "./pages/AthletesPage";
+import BiomarkersPage from "./pages/BiomarkersPage";
+import DashboardPage from "./pages/DashboardPage";
+import OrganizationsPage from "./pages/OrganizationsPage";
+import PlanningPage from "./pages/PlanningPage";
+import RiskPage from "./pages/RiskPage";
+import SessionsPage from "./pages/SessionsPage";
+import SynchronizationPage from "./pages/SynchronizationPage";
+
 export default function App() {
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#050b14",
-        color: "white",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 14, letterSpacing: 4, color: "#22d3ee" }}>NOA TRI</div>
-        <h1 style={{ fontSize: 42, marginTop: 16 }}>FRONTEND NUEVO ACTIVO</h1>
-        <p style={{ fontSize: 18, color: "#94a3b8" }}>
-          Si ves esta pantalla, estás en la carpeta correcta.
-        </p>
-      </div>
-    </div>
+    <Routes>
+      <Route path="/" element={<AppShell />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="organizations" element={<OrganizationsPage />} />
+        <Route path="athletes" element={<AthletesPage />} />
+        <Route path="athletes/:athleteId" element={<AthleteDetailPage />} />
+        <Route path="sessions" element={<SessionsPage />} />
+        <Route path="biomarkers" element={<BiomarkersPage />} />
+        <Route path="planning" element={<PlanningPage />} />
+        <Route path="risk" element={<RiskPage />} />
+        <Route path="synchronization" element={<SynchronizationPage />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
+    </Routes>
   );
 }
