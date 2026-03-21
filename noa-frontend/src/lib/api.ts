@@ -1,29 +1,27 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
 
-type QueryParams = Record<string, string | number | boolean | undefined | null>;
+type Params = Record<string, string | number | boolean | undefined | null>;
 
-function buildUrl(path: string, params?: QueryParams) {
-  const url = new URL(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`);
-
+function url(path: string, params?: Params) {
+  const target = new URL(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`);
   if (params) {
-    Object.entries(params).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== "") {
-        url.searchParams.set(key, String(value));
+        target.searchParams.set(key, String(value));
       }
-    });
+    }
   }
-
-  return url.toString();
+  return target.toString();
 }
 
-async function request<T>(path: string, options?: RequestInit, params?: QueryParams): Promise<T> {
-  const response = await fetch(buildUrl(path, params), {
+async function request<T>(path: string, init?: RequestInit, params?: Params): Promise<T> {
+  const response = await fetch(url(path, params), {
     headers: {
       "Content-Type": "application/json",
-      ...(options?.headers || {}),
+      ...(init?.headers || {}),
     },
-    ...options,
+    ...init,
   });
 
   if (!response.ok) {
@@ -32,18 +30,8 @@ async function request<T>(path: string, options?: RequestInit, params?: QueryPar
   }
 
   if (response.status === 204) return {} as T;
-
   return response.json() as Promise<T>;
 }
-
-export const api = {
-  get: <T>(path: string, params?: QueryParams) => request<T>(path, { method: "GET" }, params),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
-  put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
-  del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-};
 
 export type Organization = {
   id: string | number;
@@ -54,52 +42,71 @@ export type Organization = {
 
 export type Athlete = {
   id: string | number;
-  organization_id?: string | number;
+  name?: string;
   first_name?: string;
   last_name?: string;
-  name?: string;
+  email?: string;
   sport?: string;
   status?: string;
-};
-
-export type TrainingPlan = {
-  id: string | number;
-  athlete_id?: string | number;
-  title?: string;
-  week_label?: string;
-  status?: string;
-  objective?: string;
+  organization_id?: string | number;
 };
 
 export type Session = {
   id: string | number;
-  athlete_id?: string | number;
-  type?: string;
   title?: string;
+  type?: string;
   date?: string;
   duration?: number;
   load?: number;
-  status?: string;
+  athlete_id?: string | number;
 };
 
 export type Biomarker = {
   id: string | number;
-  athlete_id?: string | number;
   date?: string;
   hrv?: number;
   resting_hr?: number;
   sleep_score?: number;
   readiness?: number;
   fatigue?: number;
+  athlete_id?: string | number;
 };
+
+export type TrainingPlan = {
+  id: string | number;
+  title?: string;
+  objective?: string;
+  week_label?: string;
+  status?: string;
+  athlete_id?: string | number;
+};
+
+export const api = {
+  get: <T>(path: string, params?: Params) => request<T>(path, { method: "GET" }, params),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
+};
+
+export async function getDashboard() {
+  try {
+    return await api.get<any>("/dashboard");
+  } catch {
+    return {
+      total_athletes: 0,
+      total_sessions: 0,
+      avg_readiness: 0,
+      sync_status: "unknown",
+    };
+  }
+}
 
 export async function getOrganizations(): Promise<Organization[]> {
   try {
     return await api.get<Organization[]>("/organizations");
   } catch {
-    return [
-      { id: "org-1", name: "NOA TRI High Performance", sport: "Triathlon", athletes_count: 12 },
-    ];
+    return [{ id: 1, name: "NOA TRI", sport: "Triathlon", athletes_count: 0 }];
   }
 }
 
@@ -108,9 +115,12 @@ export async function getAthletes(organizationId?: string): Promise<Athlete[]> {
   return Array.isArray(data) ? data : [];
 }
 
-export async function getTrainingPlans(athleteId?: string): Promise<TrainingPlan[]> {
-  const data = await api.get<TrainingPlan[]>("/training-plan", athleteId ? { athlete_id: athleteId } : undefined);
-  return Array.isArray(data) ? data : [];
+export async function createAthlete(payload: Partial<Athlete>) {
+  return api.post<Athlete>("/athletes", payload);
+}
+
+export async function updateAthlete(id: string, payload: Partial<Athlete>) {
+  return api.put<Athlete>(`/athletes/${id}`, payload);
 }
 
 export async function getSessions(athleteId?: string): Promise<Session[]> {
@@ -118,7 +128,20 @@ export async function getSessions(athleteId?: string): Promise<Session[]> {
   return Array.isArray(data) ? data : [];
 }
 
+export async function createSession(payload: Partial<Session>) {
+  return api.post<Session>("/sessions", payload);
+}
+
 export async function getBiomarkers(athleteId?: string): Promise<Biomarker[]> {
   const data = await api.get<Biomarker[]>("/biomarkers", athleteId ? { athlete_id: athleteId } : undefined);
   return Array.isArray(data) ? data : [];
+}
+
+export async function getTrainingPlans(athleteId?: string): Promise<TrainingPlan[]> {
+  const data = await api.get<TrainingPlan[]>("/training-plan", athleteId ? { athlete_id: athleteId } : undefined);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function synchronizeGarmin(payload?: Record<string, unknown>) {
+  return api.post<any>("/synchronization", payload || { source: "garmin" });
 }
