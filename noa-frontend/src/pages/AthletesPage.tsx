@@ -1,19 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import PageHeader from "../components/layout/PageHeader";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { createAthlete, getAthletes, type Athlete } from "../lib/api";
 
-function getAthleteName(a: Athlete) {
+function name(a: Athlete) {
   return a.name || `${a.first_name || ""} ${a.last_name || ""}`.trim() || `Athlete ${a.id}`;
 }
 
 export default function AthletesPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const organizationId = searchParams.get("organizationId") || "";
   const [items, setItems] = useState<Athlete[]>([]);
-  const [query, setQuery] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -22,109 +19,86 @@ export default function AthletesPage() {
   });
 
   async function load() {
-    const data = await getAthletes(organizationId || undefined);
+    setLoading(true);
+    const data = await getAthletes();
     setItems(data);
+    setLoading(false);
   }
 
   useEffect(() => {
-    load().catch(() => setItems([]));
-  }, [organizationId]);
-
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase();
-    return items.filter((a) => getAthleteName(a).toLowerCase().includes(q));
-  }, [items, query]);
+    load();
+  }, []);
 
   async function onCreate() {
-    setSaving(true);
-    try {
-      await createAthlete({
-        ...form,
-        organization_id: organizationId || undefined,
-      });
-      setForm({ first_name: "", last_name: "", email: "", sport: "Triathlon" });
-      await load();
-    } finally {
-      setSaving(false);
-    }
+    await createAthlete(form);
+    setForm({ first_name: "", last_name: "", email: "", sport: "Triathlon" });
+    await load();
   }
 
   return (
-    <>
-      <PageHeader
-        title="Athletes"
-        subtitle="Alta, navegación y acceso al perfil del atleta."
-        actions={
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar atleta"
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
-          />
-        }
-      />
+    <div className="space-y-6 text-white">
+      <h1 className="text-3xl font-semibold">Athletes</h1>
 
-      <div className="mb-6 grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 xl:grid-cols-5">
+      {/* FORM */}
+      <div className="grid gap-3 md:grid-cols-5">
         <input
+          placeholder="First name"
           value={form.first_name}
           onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-          placeholder="First name"
-          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+          className="bg-black/30 p-3"
         />
         <input
+          placeholder="Last name"
           value={form.last_name}
           onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-          placeholder="Last name"
-          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+          className="bg-black/30 p-3"
         />
         <input
+          placeholder="Email"
           value={form.email}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
-          placeholder="Email"
-          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+          className="bg-black/30 p-3"
         />
         <input
+          placeholder="Sport"
           value={form.sport}
           onChange={(e) => setForm({ ...form, sport: e.target.value })}
-          placeholder="Sport"
-          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+          className="bg-black/30 p-3"
         />
-        <button
-          onClick={onCreate}
-          disabled={saving}
-          className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950"
-        >
-          {saving ? "Saving..." : "Create Athlete"}
+        <button onClick={onCreate} className="bg-cyan-400 text-black font-bold">
+          CREATE
         </button>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((athlete) => (
-          <div
-            key={String(athlete.id)}
-            className="rounded-3xl border border-white/10 bg-white/5 p-6"
-          >
-            <h3 className="text-xl font-semibold">{getAthleteName(athlete)}</h3>
-            <p className="mt-2 text-sm text-slate-300">{athlete.sport || "Triathlon"}</p>
-            <p className="mt-1 text-sm text-slate-400">{athlete.email || "-"}</p>
+      {/* LIST */}
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          {items.map((a) => (
+            <div key={String(a.id)} className="border p-4">
+              <h2 className="text-xl">{name(a)}</h2>
+              <p>{a.email}</p>
 
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => navigate(`/athletes/${athlete.id}`)}
-                className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-300"
-              >
-                View Profile
-              </button>
-              <button
-                onClick={() => navigate(`/planning?athleteId=${athlete.id}`)}
-                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm"
-              >
-                Planning
-              </button>
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => navigate(`/athletes/${a.id}`)}
+                  className="bg-white text-black px-3 py-1"
+                >
+                  Profile
+                </button>
+
+                <button
+                  onClick={() => navigate(`/sessions?athleteId=${a.id}`)}
+                  className="bg-cyan-400 text-black px-3 py-1"
+                >
+                  Sessions
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-    </>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
