@@ -17,14 +17,18 @@ export default function App() {
       <Route path="/" element={<AppShell />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
+
+        {/* 👇 ESTO ES LO QUE FALTABA */}
         <Route path="organizations" element={<OrganizationsPage />} />
+        <Route path="synchronization" element={<SynchronizationPage />} />
+
         <Route path="athletes" element={<AthletesPage />} />
         <Route path="athletes/:athleteId" element={<AthleteDetailPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="biomarkers" element={<BiomarkersPage />} />
         <Route path="planning" element={<PlanningPage />} />
         <Route path="risk" element={<RiskPage />} />
-        <Route path="synchronization" element={<SynchronizationPage />} />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
