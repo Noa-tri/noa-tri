@@ -1,29 +1,23 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import AppShell from "./components/layout/AppShell";
-import DashboardPage from "./pages/DashboardPage";
-import OrganizationsPage from "./pages/OrganizationsPage";
-import AthletesPage from "./pages/AthletesPage";
-import AthleteProfilePage from "./pages/AthleteProfilePage";
-import PlanningPage from "./pages/PlanningPage";
-import SessionsPage from "./pages/SessionsPage";
-import BiomarkersPage from "./pages/BiomarkersPage";
-import SynchronizationPage from "./pages/SynchronizationPage";
-
 export default function App() {
   return (
-    <AppShell>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/organizations" element={<OrganizationsPage />} />
-        <Route path="/athletes" element={<AthletesPage />} />
-        <Route path="/athletes/:athleteId" element={<AthleteProfilePage />} />
-        <Route path="/planning" element={<PlanningPage />} />
-        <Route path="/sessions" element={<SessionsPage />} />
-        <Route path="/biomarkers" element={<BiomarkersPage />} />
-        <Route path="/synchronization" element={<SynchronizationPage />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </AppShell>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#050b14",
+        color: "white",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 14, letterSpacing: 4, color: "#22d3ee" }}>NOA TRI</div>
+        <h1 style={{ fontSize: 42, marginTop: 16 }}>FRONTEND NUEVO ACTIVO</h1>
+        <p style={{ fontSize: 18, color: "#94a3b8" }}>
+          Si ves esta pantalla, estás en la carpeta correcta.
+        </p>
+      </div>
+    </div>
   );
 }
