@@ -52,6 +52,15 @@ export default function AthletesPage() {
 
     setSaving(true);
 
+    const tempAthlete: Athlete = {
+      id: `tmp-${Date.now()}`,
+      first_name: form.first_name,
+      last_name: form.last_name,
+      email: form.email,
+      sport: form.sport,
+      status: "local",
+    };
+
     try {
       const created = await createAthlete({
         first_name: form.first_name,
@@ -60,28 +69,21 @@ export default function AthletesPage() {
         sport: form.sport,
       });
 
-      const visibleAthlete: Athlete = created?.id
-        ? created
-        : {
-            id: `tmp-${Date.now()}`,
-            first_name: form.first_name,
-            last_name: form.last_name,
-            email: form.email,
-            sport: form.sport,
-            status: "active",
-          };
+      const visibleAthlete: Athlete = created?.id ? created : tempAthlete;
 
       setItems((prev) => [visibleAthlete, ...prev]);
+      setSuccess("Atleta creado");
+    } catch (e: any) {
+      setItems((prev) => [tempAthlete, ...prev]);
+      setSuccess("Atleta agregado localmente (backend no respondió)");
+      setError(e?.message || "Failed to fetch");
+    } finally {
       setForm({
         first_name: "",
         last_name: "",
         email: "",
         sport: "Triathlon",
       });
-      setSuccess("Atleta creado");
-    } catch (e: any) {
-      setError(e?.message || "No se pudo crear el atleta");
-    } finally {
       setSaving(false);
     }
   }
@@ -160,7 +162,7 @@ export default function AthletesPage() {
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
             {error}
           </div>
         ) : null}
