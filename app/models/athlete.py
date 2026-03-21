@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 from datetime import datetime
 
 from sqlalchemy import String, DateTime, Float, Integer, ForeignKey
@@ -19,18 +20,14 @@ class Athlete(Base):
     first_name: Mapped[str] = mapped_column(String(120))
     last_name: Mapped[str] = mapped_column(String(120))
 
-    weight_kg: Mapped[float | None] = mapped_column(Float)
-    height_cm: Mapped[float | None] = mapped_column(Float)
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float)
+    height_cm: Mapped[Optional[float]] = mapped_column(Float)
 
-    ftp_watts: Mapped[int | None] = mapped_column(Integer)
-    threshold_hr: Mapped[int | None] = mapped_column(Integer)
+    ftp_watts: Mapped[Optional[int]] = mapped_column(Integer)
+    threshold_hr: Mapped[Optional[int]] = mapped_column(Integer)
 
-    vo2max: Mapped[float | None] = mapped_column(Float)
+    vo2max: Mapped[Optional[float]] = mapped_column(Float)
 
-    # =========================================================
-    # GARMIN
-    # =========================================================
-
-    garmin_access_token: Mapped[str | None] = mapped_column(String(500))
+    garmin_access_token: Mapped[Optional[str]] = mapped_column(String(500))
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
