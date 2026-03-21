@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 from sqlalchemy import String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
@@ -13,7 +14,7 @@ class Organization(Base):
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     slug: Mapped[str] = mapped_column(String(160), unique=True, nullable=False)
 
-    country_code: Mapped[str | None] = mapped_column(String(2))
+    country_code: Mapped[Optional[str]] = mapped_column(String(2))
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
