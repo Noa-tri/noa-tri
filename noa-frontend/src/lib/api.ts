@@ -87,7 +87,20 @@ export const api = {
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "PUT", body: body ? JSON.stringify(body) : undefined }),
+  del: <T>(path: string) => request<T>(path, { method: "DELETE" }),
 };
+
+export async function apiGet<T>(path: string, params?: Params) {
+  return api.get<T>(path, params);
+}
+
+export async function apiPost<T>(path: string, body?: unknown) {
+  return api.post<T>(path, body);
+}
+
+export async function apiPut<T>(path: string, body?: unknown) {
+  return api.put<T>(path, body);
+}
 
 export async function getDashboard() {
   try {
