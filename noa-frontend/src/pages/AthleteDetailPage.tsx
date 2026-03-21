@@ -1,354 +1,249 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
-  Activity,
-  ArrowLeft,
-  CalendarRange,
-  HeartPulse,
-  RefreshCw,
-  ShieldAlert,
-  TimerReset,
-  Wifi,
-} from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+  getAthletes,
+  getBiomarkers,
+  getSessions,
+  type Athlete,
+  type Biomarker,
+  type Session,
+} from "../lib/api";
 
-import { apiGet, apiPost } from "../lib/api";
-import type { Athlete } from "../types/athlete";
+function athleteName(a?: Athlete | null) {
+  if (!a) return "Athlete";
+  return a.name || `${a.first_name || ""} ${a.last_name || ""}`.trim() || `Athlete ${a.id}`;
+}
 
-type SyncResponse = {
-  discovered: number;
-  processed: number;
-  skipped: number;
-  failed: number;
-};
+function lower(value?: string) {
+  return (value || "").toLowerCase();
+}
 
 export default function AthleteDetailPage() {
-  const { athleteId } = useParams();
-  const [athlete, setAthlete] = useState<Athlete | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { athleteId = "" } = useParams();
 
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [syncResult, setSyncResult] = useState<SyncResponse | null>(null);
+  const [athlete, setAthlete] = useState<Athlete | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [biomarkers, setBiomarkers] = useState<Biomarker[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadAthlete() {
-      if (!athleteId) {
-        setPageError("Athlete id missing");
-        setLoading(false);
-        return;
-      }
-
+    async function load() {
+      setLoading(true);
       try {
-        setLoading(true);
-        setPageError(null);
-        const data = await apiGet<Athlete>(`/athletes/${athleteId}`);
-        setAthlete(data);
-      } catch (error) {
-        setPageError(error instanceof Error ? error.message : "Failed to load athlete");
+        const [athletesData, sessionsData, biomarkersData] = await Promise.all([
+          getAthletes(),
+          getSessions(athleteId),
+          getBiomarkers(athleteId),
+        ]);
+
+        const found = athletesData.find((a) => String(a.id) === String(athleteId)) || null;
+
+        setAthlete(found);
+        setSessions(Array.isArray(sessionsData) ? sessionsData : []);
+        setBiomarkers(Array.isArray(biomarkersData) ? biomarkersData : []);
       } finally {
         setLoading(false);
       }
     }
 
-    loadAthlete();
+    load();
   }, [athleteId]);
 
-  async function handleSyncGarmin() {
-    if (!athleteId) {
-      return;
+  const latestBiomarker = biomarkers[0];
+
+  const summary = useMemo(() => {
+    let swim = 0;
+    let bike = 0;
+    let run = 0;
+    let totalLoad = 0;
+    let totalDuration = 0;
+
+    for (const s of sessions) {
+      const type = lower(s.type);
+      const load = Number(s.load || 0);
+      const duration = Number(s.duration || 0);
+
+      totalLoad += load;
+      totalDuration += duration;
+
+      if (type.includes("swim")) swim += load;
+      else if (type.includes("bike") || type.includes("ride") || type.includes("cycling")) bike += load;
+      else if (type.includes("run")) run += load;
     }
 
-    try {
-      setSyncLoading(true);
-      setSyncError(null);
-      setSyncResult(null);
+    const atl = Math.round(totalLoad * 0.9);
+    const ctl = Math.round(totalLoad * 0.7);
+    const tsb = ctl - atl;
 
-      const result = await apiPost<SyncResponse>(`/sync/athletes/${athleteId}/garmin`, {});
-      setSyncResult(result);
-    } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Failed to synchronize Garmin");
-    } finally {
-      setSyncLoading(false);
-    }
-  }
+    return {
+      swim,
+      bike,
+      run,
+      totalLoad,
+      totalDuration,
+      atl,
+      ctl,
+      tsb,
+    };
+  }, [sessions]);
 
   if (loading) {
-    return <div className="panel p-8 text-sm text-noa-muted">Loading athlete...</div>;
-  }
-
-  if (pageError || !athlete) {
     return (
-      <div className="panel p-8">
-        <p className="text-lg font-semibold text-white">Athlete not found</p>
-        <p className="mt-2 text-sm text-noa-muted">{pageError ?? "No athlete data available."}</p>
-        <Link
-          to="/athletes"
-          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-noa-accent"
-        >
-          <ArrowLeft size={16} />
-          Back to athletes
-        </Link>
+      <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-8 text-slate-300">
+        Loading athlete dashboard...
       </div>
     );
   }
 
-  const fullName = `${athlete.first_name} ${athlete.last_name}`;
-
   return (
     <div className="space-y-6">
-      <section className="panel overflow-hidden">
-        <div className="grid gap-8 p-6 md:grid-cols-[1.35fr_0.65fr] md:p-8">
+      <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-8">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <Link
-              to="/athletes"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-noa-accent"
+            <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/70">NOA TRI</p>
+            <h1 className="mt-3 text-4xl font-semibold text-white">{athleteName(athlete)}</h1>
+            <p className="mt-3 text-sm text-slate-400">
+              Dashboard individual del atleta para revisar cargas y decidir la planificación.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => navigate("/athletes")}
+              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
             >
-              <ArrowLeft size={16} />
-              Back to athletes
-            </Link>
+              Back to Athletes
+            </button>
+            <button
+              onClick={() => navigate(`/planning?athleteId=${athleteId}`)}
+              className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950"
+            >
+              Plan Week
+            </button>
+          </div>
+        </div>
+      </div>
 
-            <p className="mt-6 text-xs uppercase tracking-[0.3em] text-noa-muted">Athlete Profile</p>
-            <h1 className="mt-3 text-4xl font-semibold text-white">{fullName}</h1>
-            <p className="mt-3 text-sm leading-6 text-noa-muted">
-              Organization: {athlete.organization_id}
-            </p>
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="CTL" value={summary.ctl} />
+        <MetricCard label="ATL" value={summary.atl} />
+        <MetricCard label="TSB" value={summary.tsb} />
+        <MetricCard label="Readiness" value={latestBiomarker?.readiness ?? "--"} />
+      </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                onClick={handleSyncGarmin}
-                disabled={syncLoading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-noa-accent to-noa-blue px-5 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60"
-              >
-                <Wifi size={16} />
-                {syncLoading ? "Synchronizing..." : "Sync Garmin"}
-              </button>
+      <div className="grid gap-5 xl:grid-cols-3">
+        <SportCard
+          title="Swim"
+          value={summary.swim}
+          action={() => navigate(`/planning?athleteId=${athleteId}&sport=swim`)}
+        />
+        <SportCard
+          title="Bike"
+          value={summary.bike}
+          action={() => navigate(`/planning?athleteId=${athleteId}&sport=bike`)}
+        />
+        <SportCard
+          title="Run"
+          value={summary.run}
+          action={() => navigate(`/planning?athleteId=${athleteId}&sport=run`)}
+        />
+      </div>
 
-              <button
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center gap-2 rounded-2xl border border-noa-line bg-noa-panel2 px-5 py-3 text-sm font-semibold text-white"
-              >
-                <RefreshCw size={16} />
-                Refresh athlete
-              </button>
-            </div>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="metric-card">
-                <p className="text-sm text-noa-muted">FTP</p>
-                <p className="mt-3 text-4xl font-bold text-white">{athlete.ftp_watts ?? "--"}</p>
-              </div>
-
-              <div className="metric-card">
-                <p className="text-sm text-noa-muted">Threshold HR</p>
-                <p className="mt-3 text-4xl font-bold text-white">{athlete.threshold_hr ?? "--"}</p>
-              </div>
-
-              <div className="metric-card">
-                <p className="text-sm text-noa-muted">VO2max</p>
-                <p className="mt-3 text-4xl font-bold text-white">{athlete.vo2max ?? "--"}</p>
-              </div>
-
-              <div className="metric-card">
-                <p className="text-sm text-noa-muted">Weight</p>
-                <p className="mt-3 text-4xl font-bold text-white">{athlete.weight_kg ?? "--"}</p>
-              </div>
-            </div>
+      <div className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-6">
+          <h2 className="text-2xl font-semibold text-white">Session Load Overview</h2>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <SmallCard label="Sessions" value={sessions.length} />
+            <SmallCard label="Total Duration" value={summary.totalDuration} />
+            <SmallCard label="Total Load" value={summary.totalLoad} />
           </div>
 
-          <div className="rounded-[28px] border border-white/5 bg-gradient-to-br from-noa-panel2 to-noa-bg p-5">
-            <p className="text-sm font-medium text-white">Profile State</p>
-
-            <div className="mt-8 flex items-end gap-3">
-              <div className="text-6xl font-bold tracking-tight text-white">
-                {athlete.vo2max ?? "--"}
-              </div>
-              <div className="pb-2 text-sm text-noa-muted">VO2max</div>
+          <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
+            <div className="grid grid-cols-4 bg-[#06111f] px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-400">
+              <div>Date</div>
+              <div>Type</div>
+              <div>Duration</div>
+              <div>Load</div>
             </div>
 
-            <p className="mt-4 text-sm leading-6 text-noa-muted">
-              Real athlete data loaded from backend.
-            </p>
-
-            <div className="mt-6 rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-noa-muted">Created</span>
-                <span className="text-xs font-semibold text-white">
-                  {new Date(athlete.created_at).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {syncResult && (
-              <div className="mt-4 rounded-2xl border border-noa-success/30 bg-noa-success/10 p-4">
-                <p className="text-sm font-semibold text-noa-success">Garmin sync completed</p>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-noa-panel2 p-3">
-                    <span className="text-noa-muted">Discovered</span>
-                    <p className="mt-1 font-semibold text-white">{syncResult.discovered}</p>
-                  </div>
-                  <div className="rounded-xl bg-noa-panel2 p-3">
-                    <span className="text-noa-muted">Processed</span>
-                    <p className="mt-1 font-semibold text-white">{syncResult.processed}</p>
-                  </div>
-                  <div className="rounded-xl bg-noa-panel2 p-3">
-                    <span className="text-noa-muted">Skipped</span>
-                    <p className="mt-1 font-semibold text-white">{syncResult.skipped}</p>
-                  </div>
-                  <div className="rounded-xl bg-noa-panel2 p-3">
-                    <span className="text-noa-muted">Failed</span>
-                    <p className="mt-1 font-semibold text-white">{syncResult.failed}</p>
-                  </div>
+            {sessions.length === 0 ? (
+              <div className="px-4 py-6 text-sm text-slate-300">No sessions loaded yet.</div>
+            ) : (
+              sessions.slice(0, 8).map((session) => (
+                <div
+                  key={String(session.id)}
+                  className="grid grid-cols-4 border-t border-white/10 px-4 py-4 text-sm text-slate-200"
+                >
+                  <div>{session.date || "-"}</div>
+                  <div>{session.type || "-"}</div>
+                  <div>{session.duration || 0}</div>
+                  <div>{session.load || 0}</div>
                 </div>
-              </div>
-            )}
-
-            {syncError && (
-              <div className="mt-4 rounded-2xl border border-noa-danger/30 bg-noa-danger/10 p-4 text-sm text-noa-danger">
-                {syncError}
-              </div>
+              ))
             )}
           </div>
         </div>
-      </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        <div className="panel p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-noa-panel2 p-3 text-noa-accent">
-              <Activity size={18} />
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-white">Performance Zone</p>
-              <p className="text-sm text-noa-muted">Connected athlete profile</p>
-            </div>
+        <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-6">
+          <h2 className="text-2xl font-semibold text-white">Biomarkers</h2>
+
+          <div className="mt-5 grid gap-4">
+            <SmallCard label="HRV" value={latestBiomarker?.hrv ?? "--"} />
+            <SmallCard label="Resting HR" value={latestBiomarker?.resting_hr ?? "--"} />
+            <SmallCard label="Sleep Score" value={latestBiomarker?.sleep_score ?? "--"} />
+            <SmallCard label="Fatigue" value={latestBiomarker?.fatigue ?? "--"} />
           </div>
 
-          <div className="mt-6 flex h-[340px] items-center justify-center rounded-[28px] border border-dashed border-noa-line bg-noa-panel2 text-noa-muted">
-            Athlete analytics area
-          </div>
+          <button
+            onClick={() => navigate(`/biomarkers?athleteId=${athleteId}`)}
+            className="mt-6 w-full rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm font-medium text-cyan-300"
+          >
+            Open Full Metrics
+          </button>
         </div>
-
-        <div className="space-y-6">
-          <div className="panel p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-noa-panel2 p-3 text-noa-success">
-                <HeartPulse size={18} />
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-white">Physiology</p>
-                <p className="text-sm text-noa-muted">Current athlete baseline</p>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-3">
-              <div className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-                <span className="text-sm text-noa-muted">Weight</span>
-                <span className="text-sm font-semibold text-white">{athlete.weight_kg ?? "--"}</span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-                <span className="text-sm text-noa-muted">Height</span>
-                <span className="text-sm font-semibold text-white">{athlete.height_cm ?? "--"}</span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-                <span className="text-sm text-noa-muted">VO2max</span>
-                <span className="text-sm font-semibold text-white">{athlete.vo2max ?? "--"}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="panel p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-noa-panel2 p-3 text-noa-warning">
-                <ShieldAlert size={18} />
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-white">Risk Engine</p>
-                <p className="text-sm text-noa-muted">Pending live integration</p>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <p className="text-sm text-noa-muted">
-                Athlete loaded correctly. Risk visualization will activate when the real metrics are connected.
-              </p>
-            </div>
-          </div>
-
-          <div className="panel p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-noa-panel2 p-3 text-noa-blue">
-                <CalendarRange size={18} />
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-white">Planning Status</p>
-                <p className="text-sm text-noa-muted">Pending live integration</p>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <p className="text-sm text-noa-muted">
-                Planning panel will use this athlete record once weekly planning is connected.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-3">
-        <div className="panel p-6">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-noa-panel2 p-3 text-noa-accent">
-              <TimerReset size={18} />
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-white">Threshold Block</p>
-              <p className="text-sm text-noa-muted">Coach baseline values</p>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <span className="text-sm text-noa-muted">FTP</span>
-              <span className="text-sm font-semibold text-white">{athlete.ftp_watts ?? "--"}</span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <span className="text-sm text-noa-muted">Threshold HR</span>
-              <span className="text-sm font-semibold text-white">{athlete.threshold_hr ?? "--"}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="panel p-6 xl:col-span-2">
-          <p className="text-lg font-semibold text-white">Athlete Overview</p>
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <p className="text-sm text-noa-muted">First name</p>
-              <p className="mt-2 text-sm font-medium text-white">{athlete.first_name}</p>
-            </div>
-
-            <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <p className="text-sm text-noa-muted">Last name</p>
-              <p className="mt-2 text-sm font-medium text-white">{athlete.last_name}</p>
-            </div>
-
-            <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <p className="text-sm text-noa-muted">Organization</p>
-              <p className="mt-2 break-all text-sm font-medium text-white">{athlete.organization_id}</p>
-            </div>
-
-            <div className="rounded-2xl border border-noa-line bg-noa-panel2 p-4">
-              <p className="text-sm text-noa-muted">Created at</p>
-              <p className="mt-2 text-sm font-medium text-white">
-                {new Date(athlete.created_at).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-6">
+      <p className="text-sm text-slate-400">{label}</p>
+      <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function SmallCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#06111f] p-4">
+      <p className="text-sm text-slate-400">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function SportCard({
+  title,
+  value,
+  action,
+}: {
+  title: string;
+  value: string | number;
+  action: () => void;
+}) {
+  return (
+    <button
+      onClick={action}
+      className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-6 text-left transition hover:border-cyan-400/40 hover:bg-[#0b1d34]"
+    >
+      <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">Discipline</p>
+      <h3 className="mt-3 text-3xl font-semibold text-white">{title}</h3>
+      <p className="mt-4 text-sm text-slate-400">Current accumulated load</p>
+      <p className="mt-2 text-4xl font-semibold text-white">{value}</p>
+      <p className="mt-6 text-sm font-medium text-cyan-300">Open planning →</p>
+    </button>
   );
 }
