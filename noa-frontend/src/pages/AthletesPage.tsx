@@ -8,10 +8,13 @@ function athleteName(a: Athlete) {
 
 export default function AthletesPage() {
   const navigate = useNavigate();
+
   const [items, setItems] = useState<Athlete[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [query, setQuery] = useState("");
 
   const [form, setForm] = useState({
     first_name: "",
@@ -22,9 +25,13 @@ export default function AthletesPage() {
 
   async function load() {
     setLoading(true);
+    setError("");
     try {
       const data = await getAthletes();
       setItems(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      setError(e?.message || "No se pudieron cargar los atletas");
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -35,25 +42,45 @@ export default function AthletesPage() {
   }, []);
 
   async function onCreate() {
-    if (!form.first_name.trim() && !form.last_name.trim()) return;
+    setError("");
+    setSuccess("");
+
+    if (!form.first_name.trim() && !form.last_name.trim()) {
+      setError("Ingresá al menos nombre o apellido");
+      return;
+    }
 
     setSaving(true);
+
     try {
-      await createAthlete({
+      const created = await createAthlete({
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
         sport: form.sport,
       });
 
+      const visibleAthlete: Athlete = created?.id
+        ? created
+        : {
+            id: `tmp-${Date.now()}`,
+            first_name: form.first_name,
+            last_name: form.last_name,
+            email: form.email,
+            sport: form.sport,
+            status: "active",
+          };
+
+      setItems((prev) => [visibleAthlete, ...prev]);
       setForm({
         first_name: "",
         last_name: "",
         email: "",
         sport: "Triathlon",
       });
-
-      await load();
+      setSuccess("Atleta creado");
+    } catch (e: any) {
+      setError(e?.message || "No se pudo crear el atleta");
     } finally {
       setSaving(false);
     }
@@ -77,7 +104,7 @@ export default function AthletesPage() {
         <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/70">NOA TRI</p>
         <h1 className="mt-3 text-4xl font-semibold text-white">Athletes</h1>
         <p className="mt-3 text-sm text-slate-400">
-          Alta de atletas y acceso directo al dashboard individual.
+          Acá se crean, se ven y se abren los dashboards individuales.
         </p>
       </div>
 
@@ -116,14 +143,33 @@ export default function AthletesPage() {
           </button>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar atleta"
             className="w-full rounded-2xl border border-white/10 bg-[#06111f] px-4 py-3 text-sm text-white outline-none md:w-80"
           />
+
+          <button
+            onClick={load}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+          >
+            Refresh
+          </button>
         </div>
+
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        {success ? (
+          <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+            {success}
+          </div>
+        ) : null}
       </div>
 
       {loading ? (
