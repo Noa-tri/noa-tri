@@ -5,10 +5,10 @@ export default function OrganizationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-8 shadow-[0_0_0_1px_rgba(34,211,238,0.04)]">
+      <div className="rounded-[28px] border border-cyan-500/20 bg-[#08172a] p-8">
         <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/70">NOA TRI</p>
         <h1 className="mt-3 text-4xl font-semibold text-white">Organizations</h1>
-        <p className="mt-3 max-w-3xl text-sm text-slate-400">
+        <p className="mt-3 text-sm text-slate-400">
           Punto de entrada operativo para navegar organización, atletas y planificación.
         </p>
       </div>
