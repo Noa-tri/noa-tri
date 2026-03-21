@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import PageShell from "../components/layout/PageShell";
-import { getAthletes, type Athlete } from "../lib/api";
+import PageHeader from "../components/layout/PageHeader";
+import { createAthlete, getAthletes, type Athlete } from "../lib/api";
 
-function athleteName(a: Athlete) {
+function getAthleteName(a: Athlete) {
   return a.name || `${a.first_name || ""} ${a.last_name || ""}`.trim() || `Athlete ${a.id}`;
 }
 
@@ -12,69 +12,119 @@ export default function AthletesPage() {
   const [searchParams] = useSearchParams();
   const organizationId = searchParams.get("organizationId") || "";
   const [items, setItems] = useState<Athlete[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    sport: "Triathlon",
+  });
+
+  async function load() {
+    const data = await getAthletes(organizationId || undefined);
+    setItems(data);
+  }
 
   useEffect(() => {
-    setLoading(true);
-    getAthletes(organizationId || undefined)
-      .then(setItems)
-      .catch((err) => setError(err.message || "Failed to load athletes"))
-      .finally(() => setLoading(false));
+    load().catch(() => setItems([]));
   }, [organizationId]);
 
   const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) return items;
-    return items.filter((a) => athleteName(a).toLowerCase().includes(q));
+    const q = query.toLowerCase();
+    return items.filter((a) => getAthleteName(a).toLowerCase().includes(q));
   }, [items, query]);
 
-  return (
-    <PageShell
-      title="Athletes"
-      subtitle="Seleccioná un atleta para entrar a planificación, sesiones y métricas."
-      actions={
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search athlete..."
-          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-400 md:w-80"
-        />
-      }
-    >
-      {loading ? (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-slate-300">
-          Loading athletes...
-        </div>
-      ) : error ? (
-        <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-8 text-red-200">{error}</div>
-      ) : (
-        <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((athlete) => (
-            <button
-              key={String(athlete.id)}
-              onClick={() => navigate(`/planning?athleteId=${athlete.id}`)}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6 text-left transition hover:border-cyan-400/40 hover:bg-white/10"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-white">{athleteName(athlete)}</h3>
-                  <p className="mt-2 text-sm text-slate-300">{athlete.sport || "Triathlon"}</p>
-                </div>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
-                  {athlete.status || "active"}
-                </span>
-              </div>
+  async function onCreate() {
+    setSaving(true);
+    try {
+      await createAthlete({
+        ...form,
+        organization_id: organizationId || undefined,
+      });
+      setForm({ first_name: "", last_name: "", email: "", sport: "Triathlon" });
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  }
 
-              <div className="mt-8 flex items-center justify-between text-sm text-slate-400">
-                <span>ID {athlete.id}</span>
-                <span className="text-cyan-300">Planning →</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-    </PageShell>
+  return (
+    <>
+      <PageHeader
+        title="Athletes"
+        subtitle="Alta, navegación y acceso al perfil del atleta."
+        actions={
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar atleta"
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
+          />
+        }
+      />
+
+      <div className="mb-6 grid gap-4 rounded-3xl border border-white/10 bg-white/5 p-6 xl:grid-cols-5">
+        <input
+          value={form.first_name}
+          onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+          placeholder="First name"
+          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+        />
+        <input
+          value={form.last_name}
+          onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+          placeholder="Last name"
+          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+        />
+        <input
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          placeholder="Email"
+          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+        />
+        <input
+          value={form.sport}
+          onChange={(e) => setForm({ ...form, sport: e.target.value })}
+          placeholder="Sport"
+          className="rounded-2xl border border-white/10 bg-[#0b1628] px-4 py-3 text-sm outline-none"
+        />
+        <button
+          onClick={onCreate}
+          disabled={saving}
+          className="rounded-2xl bg-cyan-400 px-4 py-3 text-sm font-semibold text-slate-950"
+        >
+          {saving ? "Saving..." : "Create Athlete"}
+        </button>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((athlete) => (
+          <div
+            key={String(athlete.id)}
+            className="rounded-3xl border border-white/10 bg-white/5 p-6"
+          >
+            <h3 className="text-xl font-semibold">{getAthleteName(athlete)}</h3>
+            <p className="mt-2 text-sm text-slate-300">{athlete.sport || "Triathlon"}</p>
+            <p className="mt-1 text-sm text-slate-400">{athlete.email || "-"}</p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => navigate(`/athletes/${athlete.id}`)}
+                className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-300"
+              >
+                View Profile
+              </button>
+              <button
+                onClick={() => navigate(`/planning?athleteId=${athlete.id}`)}
+                className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm"
+              >
+                Planning
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
